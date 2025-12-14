@@ -9,7 +9,7 @@ import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
 	if (event.locals.user) {
-		return redirect(302, '/demo/lucia');
+		return redirect(302, '/');
 	}
 	return {};
 };
@@ -50,7 +50,7 @@ export const actions: Actions = {
 		const session = await auth.createSession(sessionToken, existingUser.id);
 		auth.setSessionTokenCookie(event, sessionToken, session.expiresAt);
 
-		return redirect(302, '/demo/lucia');
+		return redirect(302, '/');
 	},
 	register: async (event) => {
 		const formData = await event.request.formData();
@@ -74,7 +74,24 @@ export const actions: Actions = {
 		});
 
 		try {
-			await db.insert(table.user).values({ id: userId, username, passwordHash });
+			try {
+				await db.insert(table.user).values({ 
+                id: userId, 
+                username: username, 
+                passwordHash: passwordHash,
+                
+                // 1. 'nazwa' is .notNull() in schema, so it is REQUIRED here.
+                // We use the username as the default display name.
+                nazwa: username, 
+
+                // 2. 'elo' has a .default(1000) in schema, so we can skip it (or set it manually)
+                // 3. 'role' is nullable in schema (no .notNull()), so we can skip it
+                // 4. 'age' is nullable in schema, so we can skip it
+            });
+			} catch (error) {
+				console.log(error);
+			}
+			
 
 			const sessionToken = auth.generateSessionToken();
 			const session = await auth.createSession(sessionToken, userId);
@@ -82,7 +99,7 @@ export const actions: Actions = {
 		} catch {
 			return fail(500, { message: 'An error has occurred' });
 		}
-		return redirect(302, '/demo/lucia');
+		return redirect(302, '/');
 	}
 };
 

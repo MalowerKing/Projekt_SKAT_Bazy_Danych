@@ -1,0 +1,637 @@
+{
+  "version": "5",
+  "dialect": "mysql",
+  "id": "e53cbe12-6d28-4e68-ae15-54340a1d6811",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "Gra": {
+      "name": "Gra",
+      "columns": {
+        "GraID": {
+          "name": "GraID",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "GraczID 1": {
+          "name": "GraczID 1",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "GraczID 2": {
+          "name": "GraczID 2",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "GraczID 3": {
+          "name": "GraczID 3",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "Zwycięzca": {
+          "name": "Zwycięzca",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "is_ranked": {
+          "name": "is_ranked",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": false
+        },
+        "Data": {
+          "name": "Data",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "MiejsceID": {
+          "name": "MiejsceID",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "TurniejID": {
+          "name": "TurniejID",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "Gra_GraczID 1_user_id_fk": {
+          "name": "Gra_GraczID 1_user_id_fk",
+          "tableFrom": "Gra",
+          "tableTo": "user",
+          "columnsFrom": [
+            "GraczID 1"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "Gra_GraczID 2_user_id_fk": {
+          "name": "Gra_GraczID 2_user_id_fk",
+          "tableFrom": "Gra",
+          "tableTo": "user",
+          "columnsFrom": [
+            "GraczID 2"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "Gra_GraczID 3_user_id_fk": {
+          "name": "Gra_GraczID 3_user_id_fk",
+          "tableFrom": "Gra",
+          "tableTo": "user",
+          "columnsFrom": [
+            "GraczID 3"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "Gra_Zwycięzca_user_id_fk": {
+          "name": "Gra_Zwycięzca_user_id_fk",
+          "tableFrom": "Gra",
+          "tableTo": "user",
+          "columnsFrom": [
+            "Zwycięzca"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "Gra_MiejsceID_Miejsca_MiejscaID_fk": {
+          "name": "Gra_MiejsceID_Miejsca_MiejscaID_fk",
+          "tableFrom": "Gra",
+          "tableTo": "Miejsca",
+          "columnsFrom": [
+            "MiejsceID"
+          ],
+          "columnsTo": [
+            "MiejscaID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "Gra_TurniejID_Turniej_TurniejID_fk": {
+          "name": "Gra_TurniejID_Turniej_TurniejID_fk",
+          "tableFrom": "Gra",
+          "tableTo": "Turniej",
+          "columnsFrom": [
+            "TurniejID"
+          ],
+          "columnsTo": [
+            "TurniejID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "Gra_GraID": {
+          "name": "Gra_GraID",
+          "columns": [
+            "GraID"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "Lista Uczestników Turniej": {
+      "name": "Lista Uczestników Turniej",
+      "columns": {
+        "PrimeID": {
+          "name": "PrimeID",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "TurniejID": {
+          "name": "TurniejID",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "GraczID": {
+          "name": "GraczID",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "Miejsce": {
+          "name": "Miejsce",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "Lista Uczestników Turniej_TurniejID_Turniej_TurniejID_fk": {
+          "name": "Lista Uczestników Turniej_TurniejID_Turniej_TurniejID_fk",
+          "tableFrom": "Lista Uczestników Turniej",
+          "tableTo": "Turniej",
+          "columnsFrom": [
+            "TurniejID"
+          ],
+          "columnsTo": [
+            "TurniejID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "Lista Uczestników Turniej_GraczID_user_id_fk": {
+          "name": "Lista Uczestników Turniej_GraczID_user_id_fk",
+          "tableFrom": "Lista Uczestników Turniej",
+          "tableTo": "user",
+          "columnsFrom": [
+            "GraczID"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "Lista Uczestników Turniej_PrimeID": {
+          "name": "Lista Uczestników Turniej_PrimeID",
+          "columns": [
+            "PrimeID"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "Miejsca": {
+      "name": "Miejsca",
+      "columns": {
+        "MiejscaID": {
+          "name": "MiejscaID",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "Nazwa": {
+          "name": "Nazwa",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "Adres": {
+          "name": "Adres",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "Miasto": {
+          "name": "Miasto",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "Miejsca_MiejscaID": {
+          "name": "Miejsca_MiejscaID",
+          "columns": [
+            "MiejscaID"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "role": {
+      "name": "role",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "Uprawnienia": {
+          "name": "Uprawnienia",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "role_id": {
+          "name": "role_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "session": {
+      "name": "session",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "datetime",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "session_user_id_user_id_fk": {
+          "name": "session_user_id_user_id_fk",
+          "tableFrom": "session",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "session_id": {
+          "name": "session_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "Turniej": {
+      "name": "Turniej",
+      "columns": {
+        "TurniejID": {
+          "name": "TurniejID",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "Nazwa": {
+          "name": "Nazwa",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "MiejsceID": {
+          "name": "MiejsceID",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "Data": {
+          "name": "Data",
+          "type": "datetime",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "TwórcaID": {
+          "name": "TwórcaID",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "godzina": {
+          "name": "godzina",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "ZwycięzcaID": {
+          "name": "ZwycięzcaID",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "Turniej_MiejsceID_Miejsca_MiejscaID_fk": {
+          "name": "Turniej_MiejsceID_Miejsca_MiejscaID_fk",
+          "tableFrom": "Turniej",
+          "tableTo": "Miejsca",
+          "columnsFrom": [
+            "MiejsceID"
+          ],
+          "columnsTo": [
+            "MiejscaID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "Turniej_TwórcaID_user_id_fk": {
+          "name": "Turniej_TwórcaID_user_id_fk",
+          "tableFrom": "Turniej",
+          "tableTo": "user",
+          "columnsFrom": [
+            "TwórcaID"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "Turniej_ZwycięzcaID_user_id_fk": {
+          "name": "Turniej_ZwycięzcaID_user_id_fk",
+          "tableFrom": "Turniej",
+          "tableTo": "user",
+          "columnsFrom": [
+            "ZwycięzcaID"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "Turniej_TurniejID": {
+          "name": "Turniej_TurniejID",
+          "columns": [
+            "TurniejID"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "user": {
+      "name": "user",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "age": {
+          "name": "age",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "username": {
+          "name": "username",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "Nazwa": {
+          "name": "Nazwa",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "Role": {
+          "name": "Role",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "ELO": {
+          "name": "ELO",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 1000
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_Role_role_id_fk": {
+          "name": "user_Role_role_id_fk",
+          "tableFrom": "user",
+          "tableTo": "role",
+          "columnsFrom": [
+            "Role"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "user_id": {
+          "name": "user_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "user_username_unique": {
+          "name": "user_username_unique",
+          "columns": [
+            "username"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "Zaproszenia": {
+      "name": "Zaproszenia",
+      "columns": {
+        "PrimeID": {
+          "name": "PrimeID",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "GraczID": {
+          "name": "GraczID",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "TurniejID": {
+          "name": "TurniejID",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "Zaproszenia_GraczID_user_id_fk": {
+          "name": "Zaproszenia_GraczID_user_id_fk",
+          "tableFrom": "Zaproszenia",
+          "tableTo": "user",
+          "columnsFrom": [
+            "GraczID"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "Zaproszenia_TurniejID_Turniej_TurniejID_fk": {
+          "name": "Zaproszenia_TurniejID_Turniej_TurniejID_fk",
+          "tableFrom": "Zaproszenia",
+          "tableTo": "Turniej",
+          "columnsFrom": [
+            "TurniejID"
+          ],
+          "columnsTo": [
+            "TurniejID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "Zaproszenia_PrimeID": {
+          "name": "Zaproszenia_PrimeID",
+          "columns": [
+            "PrimeID"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    }
+  },
+  "views": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "tables": {},
+    "indexes": {}
+  }
+}

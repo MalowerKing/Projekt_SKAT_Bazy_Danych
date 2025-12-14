@@ -1,16 +1,27 @@
-import { mysqlTable, serial, int, varchar, datetime, time, boolean } from 'drizzle-orm/mysql-core';
-import { relations } from 'drizzle-orm'
+import { mysqlTable, int, varchar, datetime, time, boolean } from 'drizzle-orm/mysql-core';
+import { relations } from 'drizzle-orm';
 
-//user(gracz)
+// --- ROLES ---
+
+export const role = mysqlTable('role', {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    uprawnienia: varchar('uprawnienia', { length: 255 })
+});
+
+export const roleRelations = relations(role, ({ many }) => ({
+  gracze: many(user),
+}));
+
+// --- USER (GRACZ) ---
 
 export const user = mysqlTable('user', {
-	id: varchar('id', { length: 255 }).primaryKey(),
-	age: int('age'),
-	username: varchar('username', { length: 32 }).notNull().unique(),
-	passwordHash: varchar('password_hash', { length: 255 }).notNull(),
-	nazwa: varchar('Nazwa', { length: 255 }).notNull(),
-	role: int('Role').references(() => role.id),
-	elo: int('ELO').default(1000),
+    id: varchar('id', { length: 255 }).primaryKey(),
+    age: int('age'),
+    username: varchar('username', { length: 32 }).notNull().unique(),
+    passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+    nazwa: varchar('nazwa', { length: 255 }).notNull(),
+    role: varchar('role_id', { length: 255 }).references(() => role.id),
+    elo: int('elo').default(1000),
 });
 
 export const graczRelations = relations(user, ({ one, many }) => ({
@@ -30,34 +41,23 @@ export const graczRelations = relations(user, ({ one, many }) => ({
   uczestnictwoWTurniejach: many(listaUczestnikowTurniej),
 }));
 
-//sesja
+// --- SESSION ---
 
 export const session = mysqlTable('session', {
-	id: varchar('id', { length: 255 }).primaryKey(),
-	userId: varchar('user_id', { length: 255 })
-		.notNull()
-		.references(() => user.id),
-	expiresAt: datetime('expires_at').notNull()
+    id: varchar('id', { length: 255 }).primaryKey(),
+    userId: varchar('user_id', { length: 255 })
+        .notNull()
+        .references(() => user.id),
+    expiresAt: datetime('expires_at').notNull()
 });
 
-//role i uprawnienia
+// --- MIEJSCA ---
 
-export const role = mysqlTable('role', {
-	id: varchar('id', { length: 255 }).primaryKey(),
-	uprawnienia: varchar('Uprawnienia', { length: 255 })
-});
-
-export const roleRelations = relations(role, ({ many }) => ({
-  gracze: many(user),
-}));
-
-//Miejsca
-
-export const miejsca = mysqlTable('Miejsca', {
-  miejscaID: int('MiejscaID').autoincrement().primaryKey(),
-  nazwa: varchar('Nazwa', { length: 255 }),
-  adres: varchar('Adres', { length: 255 }),
-  miasto: varchar('Miasto', { length: 255 }),
+export const miejsca = mysqlTable('miejsca', {
+  miejscaID: varchar('miejsca_id', { length: 255 }).primaryKey(),
+  nazwa: varchar('nazwa', { length: 255 }),
+  adres: varchar('adres', { length: 255 }),
+  miasto: varchar('miasto', { length: 255 }),
 });
 
 export const miejscaRelations = relations(miejsca, ({ many }) => ({
@@ -65,16 +65,16 @@ export const miejscaRelations = relations(miejsca, ({ many }) => ({
   turnieje: many(turniej),
 }));
 
-//Turnieje
+// --- TURNIEJE ---
 
-export const turniej = mysqlTable('Turniej', {
-  turniejID: int('TurniejID').autoincrement().primaryKey(),
-  nazwa: varchar('Nazwa', { length: 255 }),
-  miejsceID: int('MiejsceID').references(() => miejsca.miejscaID),
-  data: datetime('Data'), 
-  tworcaID: int('TwórcaID').references(() => user.id),
-  godzina: time(), 
-  zwyciezcaID: int('ZwycięzcaID').references(() => user.id),
+export const turniej = mysqlTable('turniej', {
+  turniejID: varchar('turniej_id', { length: 255 }).primaryKey(),
+  nazwa: varchar('nazwa', { length: 255 }),
+  miejsceID: varchar('miejsce_id', { length: 255 }).references(() => miejsca.miejscaID),
+  data: datetime('data'), 
+  tworcaID: varchar('tworca_id', { length: 255 }).references(() => user.id),
+  godzina: time('godzina'), 
+  zwyciezcaID: varchar('zwyciezca_id', { length: 255 }).references(() => user.id),
 });
 
 export const turniejRelations = relations(turniej, ({ one, many }) => ({
@@ -97,19 +97,18 @@ export const turniejRelations = relations(turniej, ({ one, many }) => ({
   uczestnicy: many(listaUczestnikowTurniej),
 }));
 
-//Gra
+// --- GRA ---
 
-export const gra = mysqlTable('Gra', {
-  graID: int('GraID').autoincrement().primaryKey(),
-  // Note: Drizzle will handle the escaping of column names with spaces automatically
-  graczID1: int('GraczID 1').references(() => user.id),
-  graczID2: int('GraczID 2').references(() => user.id),
-  graczID3: int('GraczID 3').references(() => user.id),
-  zwyciezca: int('Zwycięzca').references(() => user.id),
+export const gra = mysqlTable('gra', {
+  graID: varchar('gra_id', { length: 255 }).primaryKey(),
+  graczID1: varchar('gracz_id_1', { length: 255 }).references(() => user.id),
+  graczID2: varchar('gracz_id_2', { length: 255 }).references(() => user.id),
+  graczID3: varchar('gracz_id_3', { length: 255 }).references(() => user.id),
+  zwyciezca: varchar('zwyciezca_id', { length: 255 }).references(() => user.id),
   isRanked: boolean('is_ranked').default(false),
-  data: time('Data'), 
-  miejsceID: int('MiejsceID').references(() => miejsca.miejscaID),
-  turniejID: int('TurniejID').references(() => turniej.turniejID),
+  data: time('data'), 
+  miejsceID: varchar('miejsce_id', { length: 255 }).references(() => miejsca.miejscaID),
+  turniejID: varchar('turniej_id', { length: 255 }).references(() => turniej.turniejID),
 });
 
 export const graRelations = relations(gra, ({ one }) => ({
@@ -143,12 +142,12 @@ export const graRelations = relations(gra, ({ one }) => ({
   }),
 }));
 
-//Zaproszenia
+// --- ZAPROSZENIA ---
 
-export const zaproszenia = mysqlTable('Zaproszenia', {
-  primeID: int('PrimeID').autoincrement().primaryKey(),
-  graczID: int('GraczID').references(() => user.id),
-  turniejID: int('TurniejID').references(() => turniej.turniejID),
+export const zaproszenia = mysqlTable('zaproszenia', {
+  primeID: varchar('prime_id', { length: 255 }).primaryKey(),
+  graczID: varchar('gracz_id', { length: 255 }).references(() => user.id),
+  turniejID: varchar('turniej_id', { length: 255 }).references(() => turniej.turniejID),
 });
 
 export const zaproszeniaRelations = relations(zaproszenia, ({ one }) => ({
@@ -162,13 +161,13 @@ export const zaproszeniaRelations = relations(zaproszenia, ({ one }) => ({
   }),
 }));
 
-//Lista uczestników
+// --- LISTA UCZESTNIKÓW ---
 
-export const listaUczestnikowTurniej = mysqlTable('Lista Uczestników Turniej', {
-  primeID: int('PrimeID').autoincrement().primaryKey(),
-  turniejID: int('TurniejID').references(() => turniej.turniejID),
-  graczID: int('GraczID').references(() => user.id),
-  miejsce: int('Miejsce'), 
+export const listaUczestnikowTurniej = mysqlTable('lista_uczestnikow_turniej', {
+  primeID: varchar('prime_id', { length: 255 }).primaryKey(),
+  turniejID: varchar('turniej_id', { length: 255 }).references(() => turniej.turniejID),
+  graczID: varchar('gracz_id', { length: 255 }).references(() => user.id),
+  miejsce: int('miejsce'), 
 });
 
 export const listaUczestnikowRelations = relations(listaUczestnikowTurniej, ({ one }) => ({
@@ -182,11 +181,13 @@ export const listaUczestnikowRelations = relations(listaUczestnikowTurniej, ({ o
   }),
 }));
 
+// --- TYPE EXPORTS ---
+
 export type Session = typeof session.$inferSelect;
 export type User = typeof user.$inferSelect;
-export type gra = typeof gra.$inferSelect
-export type turniej = typeof turniej.$inferSelect
-export type zaproszenia = typeof zaproszenia.$inferSelect
-export type miejsca = typeof miejsca.$inferSelect
-
-
+export type Role = typeof role.$inferSelect;
+export type Gra = typeof gra.$inferSelect;
+export type Turniej = typeof turniej.$inferSelect;
+export type Zaproszenia = typeof zaproszenia.$inferSelect;
+export type Miejsca = typeof miejsca.$inferSelect;
+export type ListaUczestnikowTurniej = typeof listaUczestnikowTurniej.$inferSelect;
