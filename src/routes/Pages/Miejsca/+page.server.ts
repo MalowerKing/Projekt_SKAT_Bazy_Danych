@@ -1,6 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db'; 
-import { miejsca } from '$lib/server/db/schema';
+import { miejsca, gra, user } from '$lib/server/db/schema';
 import { encodeBase32LowerCase } from '@oslojs/encoding';
 import type { PageServerLoad } from '../../$types';
 
