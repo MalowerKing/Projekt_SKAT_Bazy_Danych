@@ -33,9 +33,11 @@
     <ul>
       <li><a href="/" on:click={closeMenu}>Home</a></li>
         <li><a href="/Pages/O mnie" on:click={closeMenu}>O mnie</a></li>
-      <li><a href="/Pages/Miejsca" on:click={closeMenu}>Miejsca</a></li>
-      <li><a href="/Pages/Turnieje" on:click={closeMenu}>Turnieje</a></li>
+        <li><a href="/Pages/Miejsca" on:click={closeMenu}>Miejsca</a></li>
+        <li><a href="/Pages/Turnieje" on:click={closeMenu}>Turnieje</a></li>
+        <li><a href="/Pages/Rozgrywki" on:click={closeMenu}>Rozgrywki</a></li>
         <li><a href="/Pages/Rankingi" on:click={closeMenu}>Rankingi</a></li>
+        
     </ul>
   </div>
 </nav>
