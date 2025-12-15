@@ -106,7 +106,7 @@ export const gra = mysqlTable('gra', {
   graczID3: varchar('gracz_id_3', { length: 255 }).references(() => user.id),
   zwyciezca: varchar('zwyciezca_id', { length: 255 }).references(() => user.id),
   isRanked: boolean('is_ranked').default(false),
-  data: time('data'), 
+  data: datetime('data'), 
   miejsceID: varchar('miejsce_id', { length: 255 }).references(() => miejsca.miejscaID),
   turniejID: varchar('turniej_id', { length: 255 }).references(() => turniej.turniejID),
 });

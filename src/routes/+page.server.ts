@@ -9,6 +9,7 @@ import { gra, miejsca, turniej, user } from '$lib/server/db/schema';
 import { alias } from 'drizzle-orm/mysql-core';
 import { request } from 'http';
 import { fromAction } from 'svelte/attachments';
+import { randomUUID } from 'crypto';
 
 const gracz = user;
 
@@ -62,18 +63,59 @@ export const actions: Actions = {
 		const gracz3 = formData.get('gracz3') as string;
 		const zwyciezca = formData.get('zwyciezca') as string;
 		const miejsce = formData.get('miejsceNazwa') as string;
-		const turniej = formData.get('TurniejNazwa') as string;
+		const rozgrywka = formData.get('TurniejNazwa') as string;
 		const isRanked = formData.get('isRanked') === 'on';
 
-		if (!gracz1 || !gracz2 || !gracz3 || !zwyciezca || !miejsce || !turniej) {
+		if (!gracz1 || !gracz2 || !gracz3 || !zwyciezca || !miejsce || !rozgrywka) {
 			return fail(400, {missing: true, message: 'Nie uzupełniono wszytskich danych formularza!'});
 		}
 
 		try {
+			// Download IDs from names
+			const gracz1Data = await db.select().from(user).where(eq(user.nazwa, gracz1)).limit(1);
+			const gracz2Data = await db.select().from(user).where(eq(user.nazwa, gracz2)).limit(1);
+			const gracz3Data = await db.select().from(user).where(eq(user.nazwa, gracz3)).limit(1);
+			const zwyciezcaData = await db.select().from(user).where(eq(user.nazwa, zwyciezca)).limit(1);
+			const miejsceData = await db.select().from(miejsca).where(eq(miejsca.nazwa, miejsce)).limit(1);
+			const turniejData = await db.select().from(turniej).where(eq(turniej.nazwa, rozgrywka)).limit(1);
+
+			// Add game to database
 			await db.insert(gra).values({
+				graID: randomUUID(),
+				graczID1: gracz1Data[0].id,
+				graczID2: gracz2Data[0].id,
+				graczID3: gracz3Data[0].id,
+				zwyciezca: zwyciezcaData[0].id,
+				miejsceID: miejsceData[0].miejscaID,
+				turniejID: turniejData[0].turniejID,
+				isRanked: isRanked,
+				data: new Date()
 			});
-		} catch (error) {
+
+			// Compute new ranks if ranked game
+			if (isRanked) {
+				// Download current ranks
+				const gracz1Rank = gracz1Data[0].elo ?? 1000;
+				const gracz2Rank = gracz2Data[0].elo ?? 1000;
+				const gracz3Rank = gracz3Data[0].elo ?? 1000;
+
+				// Calculate new ranks
+				const newRanks = calculateNewEloRank(
+					gracz1Rank, 
+					gracz2Rank, 
+					gracz3Rank,
+					zwyciezca === gracz1 ? 1 : (zwyciezca === gracz2 ? 2 : 3)
+				);
+
+				// Update ranks in database
+				await db.update(user).set({ elo: newRanks.player1NewRank }).where(eq(user.id, gracz1Data[0].id));
+				await db.update(user).set({ elo: newRanks.player2NewRank }).where(eq(user.id, gracz2Data[0].id));
+				await db.update(user).set({ elo: newRanks.player3NewRank }).where(eq(user.id, gracz3Data[0].id));
+			}
+
 			
+		} catch (error) {
+			return fail(500, { databaseError: true, message: 'Wystąpił błąd podczas dodawania gry do bazy danych.' });
 		}
 	}
 };
