@@ -194,13 +194,7 @@ export function isValidPermissions(permissions: unknown): boolean {
 // Generate user ID
 export function generateUserId(): string {
     const randomBytes = crypto.getRandomValues(new Uint8Array(16));
-    const uuid = encodeBase32LowerCase(randomBytes);
-	// Check if user ID already exists (very unlikely, but just in case)
-	if (!doesUserExistById(uuid)) {
-		return uuid;
-	}
-	// If collision occurs, recursively generate a new ID
-	return generateUserId();
+    return encodeBase32LowerCase(randomBytes);
 }
 
 // Hash password
