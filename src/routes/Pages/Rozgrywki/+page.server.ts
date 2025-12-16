@@ -5,6 +5,7 @@ import { eq, inArray, desc } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/mysql-core';
 import type { PageServerLoad, Actions } from './$types';
 import { randomUUID } from 'crypto';
+import { form } from '$app/server';
 
 
 export const load: PageServerLoad = async (event) => {
@@ -54,6 +55,7 @@ export const actions: Actions = {
 		const gracz3 = formData.get('gracz3') as string;
 		const zwyciezca = formData.get('zwyciezca') as string;
 		const miejsce = formData.get('miejsceNazwa') as string;
+		const data = formData.get('data') as string;
 		const rozgrywka = formData.get('TurniejNazwa') as string;
 		const isRanked = formData.get('isRanked') === 'on';
 
@@ -80,7 +82,7 @@ export const actions: Actions = {
 				miejsceID: miejsceData[0].miejscaID,
 				turniejID: turniejData[0].turniejID,
 				isRanked: isRanked,
-				data: new Date()
+				data: new Date(data)
 			});
 
 			// Compute new ranks if ranked game

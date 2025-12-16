@@ -4,6 +4,10 @@
 
 	export let data: PageData;
 
+	const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    let defaultDate = now.toISOString().slice(0, 16);
+
 	let sortKey = 'data';
 	let sortDirection: 'asc' | 'desc' = 'desc';
 	let selectedIds: string[] = [];
@@ -123,7 +127,7 @@
 		<h2>Dodaj nową grę</h2>
 		<form method="post" action="?/addGame" use:enhance class="game-form">
 			<div class="form-grid">
-				<div class="form-group">
+                <div class="form-group">
 					<label for="gracz1">Gracz 1</label>
 					<input type="text" name="gracz1" id="gracz1" placeholder="Nazwa gracza 1" required>
 				</div>
@@ -152,7 +156,18 @@
 					<label for="turniej">Turniej</label>
 					<input type="text" name="TurniejNazwa" id="turniej" placeholder="Nazwa turnieju">
 				</div>
-			</div>
+
+                <div class="form-group">
+					<label for="data">Data rozgrywki</label>
+                    <input 
+                        type="date" 
+                        name="data" 
+                        id="data" 
+                        bind:value={defaultDate} 
+                        required
+                    >
+				</div>
+            </div>
 
 			<div class="form-footer">
 				<div class="checkbox-group">
