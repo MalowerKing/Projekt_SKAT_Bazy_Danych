@@ -39,8 +39,8 @@
         <li><a href="/Pages/Rankingi" on:click={closeMenu}>Rankingi</a></li>
     </ul>
 
-    <a href="/Pages/Rejestracja" class="btn-register" on:click={closeMenu}>
-      Zarejestruj się
+    <a href="/login?" class="btn-register" on:click={closeMenu}>
+      Zaloguj się
     </a>
   </div>
 </nav>

@@ -1,117 +1,95 @@
-import { hash, verify } from '@node-rs/argon2';
-import { encodeBase32LowerCase } from '@oslojs/encoding';
+import { verify } from '@node-rs/argon2';
 import { fail, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import * as auth from '$lib/server/auth';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
-import type { Actions, PageServerLoad } from './$types';
+import type { Actions, PageServerLoad } from '../$types';
+
 
 export const load: PageServerLoad = async (event) => {
-	if (event.locals.user) {
-		return redirect(302, '/');
-	}
-	return {};
+    if (event.locals.user) {
+        return redirect(302, '/');
+    }
+    return {};
 };
 
 export const actions: Actions = {
-	login: async (event) => {
-		const formData = await event.request.formData();
-		const username = formData.get('username');
-		const password = formData.get('password');
+    // Action for user login with username or email and password
+    login: async (event) => {
+        const formData = await event.request.formData();
+        const identifier = formData.get('identifier'); // username or email
+        const password = formData.get('password');
 
-		if (!validateUsername(username)) {
-			return fail(400, {
-				message: 'Invalid username (min 3, max 31 characters, alphanumeric only)'
-			});
-		}
-		if (!validatePassword(password)) {
-			return fail(400, { message: 'Invalid password (min 6, max 255 characters)' });
-		}
+        if (typeof identifier !== 'string' || typeof password !== 'string') {
+            return fail(400, { invalidInput: true });
+        }
 
-		const results = await db.select().from(table.user).where(eq(table.user.nazwa, username));
+        // Check if identifier is email
+        let isEmail: boolean = false;
+        if (auth.isValidEmail(identifier)) {
+            isEmail = true;
+        }
+        else if (!auth.isValidUsername(identifier)) {
+            return fail(400, { invalidInput: true });
+        }
 
-		const existingUser = results.at(0);
-		if (!existingUser) {
-			return fail(400, { message: 'Incorrect username or password' });
-		}
+        if (!auth.isValidPassword(password)) {
+            return fail(400, { invalidPassword: true });
+        }
 
-		const validPassword = await verify(existingUser.passwordHash, password, {
-			memoryCost: 19456,
-			timeCost: 2,
-			outputLen: 32,
-			parallelism: 1
-		});
-		if (!validPassword) {
-			return fail(400, { message: 'Incorrect username or password' });
-		}
+        // Fetch user from database if email is given otherwise by username
+        let users: any[] = [];
+        if (isEmail) {
+            try {
+                users = await db.select()
+                    .from(table.user)
+                    .where(eq(table.user.email, identifier))
+                    .limit(1);
 
-		const sessionToken = auth.generateSessionToken();
-		const session = await auth.createSession(sessionToken, existingUser.id);
-		auth.setSessionTokenCookie(event, sessionToken, session.expiresAt);
+                if (users.length === 0) {
+                    return fail(400, { userNotFound: true });
+                }
+            }
+            catch (error) {
+                return fail(500, { serverError: true });
+            }
+        }
+        else {
+            try {
+                users = await db.select()
+                    .from(table.user)
+                    .where(eq(table.user.nazwa, identifier))
+                    .limit(1);
 
-		return redirect(302, '/');
-	},
-	register: async (event) => {
-		const formData = await event.request.formData();
-		const username = formData.get('username');
-		const password = formData.get('password');
+                if (users.length === 0) {
+                    return fail(400, { userNotFound: true });
+                }
+            }
+            catch (error) {
+                return fail(500, { serverError: true });
+            }
+        }
+        
+        const user = users[0];
 
-		if (!validateUsername(username)) {
-			return fail(400, { message: 'Invalid username' });
-		}
-		if (!validatePassword(password)) {
-			return fail(400, { message: 'Invalid password' });
-		}
+        // Verify password
+        const validPassword = await verify(user.passwordHash, password, {
+            memoryCost: 19456,
+            timeCost: 2,
+            outputLen: 32,
+            parallelism: 1
+        });
+        
+        if (!validPassword) {
+            return fail(400, { invalidCredentials: true });
+        }
 
-		const userId = generateUserId();
-		const passwordHash = await hash(password, {
-			// recommended minimum parameters
-			memoryCost: 19456,
-			timeCost: 2,
-			outputLen: 32,
-			parallelism: 1
-		});
+        // Create session and set cookie
+        const sessionToken = auth.generateSessionToken();
+        const session = await auth.createSession(sessionToken, user.id);
+        auth.setSessionTokenCookie(event, sessionToken, session.expiresAt);
 
-		try {
-			try {
-				await db.insert(table.user).values({ 
-                id: userId, 
-				nazwa: username,
-				email: '',
-                passwordHash: passwordHash
-            });
-			} catch (error) {
-				console.log(error);
-			}
-			
-
-			const sessionToken = auth.generateSessionToken();
-			const session = await auth.createSession(sessionToken, userId);
-			auth.setSessionTokenCookie(event, sessionToken, session.expiresAt);
-		} catch {
-			return fail(500, { message: 'An error has occurred' });
-		}
-		return redirect(302, '/');
-	}
+        return redirect(302, '/');
+    }
 };
-
-function generateUserId() {
-	// ID with 120 bits of entropy, or about the same as UUID v4.
-	const bytes = crypto.getRandomValues(new Uint8Array(15));
-	const id = encodeBase32LowerCase(bytes);
-	return id;
-}
-
-function validateUsername(username: unknown): username is string {
-	return (
-		typeof username === 'string' &&
-		username.length >= 3 &&
-		username.length <= 31 &&
-		/^[a-zA-Z0-9]+$/.test(username)
-	);
-}
-
-function validatePassword(password: unknown): password is string {
-	return typeof password === 'string' && password.length >= 6 && password.length <= 255;
-}

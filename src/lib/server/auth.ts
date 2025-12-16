@@ -83,3 +83,22 @@ export function setSessionTokenCookie(event: RequestEvent, token: string, expire
 export function deleteSessionTokenCookie(event: RequestEvent) {
 	event.cookies.delete(sessionCookieName, { path: '/' });
 }
+
+// Function to validate username format
+export function isValidUsername(username: unknown): boolean {
+	if (typeof username !== 'string') return false;
+	return username.length >= 3 && username.length <= 31 && /^[a-zA-Z0-9]{3,31}$/.test(username);
+}
+
+// Function to check password requirements
+export function isValidPassword(password: unknown): boolean {
+	if (typeof password !== 'string') return false;
+	return password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password) && password.length <= 255;
+}
+
+// Validate email format
+export function isValidEmail(email: unknown): boolean {
+	if (typeof email !== 'string') return false;
+	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+	return emailRegex.test(email);
+}

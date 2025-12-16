@@ -1,4 +1,4 @@
-import { hash, verify } from '@node-rs/argon2';
+import { hash } from '@node-rs/argon2';
 import { encodeBase32LowerCase } from '@oslojs/encoding';
 import { fail, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
@@ -23,15 +23,15 @@ export const actions: Actions = {
         const confirmPassword = formData.get('confirmPassword');
 
         // Validate input
-        if (!isValidUsername(username)) {
+        if (!auth.isValidUsername(username)) {
             return fail(400, { username, invalidUsername: true });
         }
 
-        if (!isValidPassword(password)) {
+        if (!auth.isValidPassword(password)) {
             return fail(400, { username, invalidPassword: true });
         }
 
-        if (!isValidEmail(email)) {
+        if (!auth.isValidEmail(email)) {
             return fail(400, { username, invalidEmail: true });
         }
 
@@ -54,7 +54,12 @@ export const actions: Actions = {
         }
 
         // Create new user
-        const passwordHash: string = await hash(password);
+        const passwordHash: string = await hash(password, {
+            memoryCost: 19456,
+            timeCost: 2,
+            outputLen: 32,
+            parallelism: 1
+        });
         const userId: string = generateUserId();
 
         try {
@@ -80,28 +85,8 @@ export const actions: Actions = {
     }
 };
 
-// Function to validate username format
-function isValidUsername(username: unknown): boolean {
-    return typeof username === 'string' &&
-    username.length >= 3 &&
-    username.length <= 31 &&
-    /^[a-zA-Z0-9]{3,31}$/.test(username);
-}
-
-// Function to check password requirements
-function isValidPassword(password: unknown): boolean {
-    return typeof password === 'string' && password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password) && password.length <= 255;
-}
-
 // Generate user ID
 function generateUserId(): string {
     const randomBytes = crypto.getRandomValues(new Uint8Array(16));
     return encodeBase32LowerCase(randomBytes);
-}
-
-// Validate email format
-function isValidEmail(email: unknown): boolean {
-    if (typeof email !== 'string') return false;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
 }

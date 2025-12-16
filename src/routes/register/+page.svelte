@@ -3,7 +3,7 @@
 	import { fade, scale } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { goto } from '$app/navigation'; // Import do przekierowania
-	import type { ActionData } from './$types';
+	import type { ActionData } from '../$types';
 
 	export let form: ActionData;
 
@@ -26,18 +26,10 @@
 	function closeModal() {
 		goto('/');
 	}
-
-	// Obsługa kliknięcia w tło
-	function handleBackdropClick(e: MouseEvent) {
-		if (e.target === e.currentTarget) {
-			closeModal();
-		}
-	}
 </script>
 
 <div 
-    class="modal-backdrop" 
-    on:click={handleBackdropClick} 
+    class="modal-backdrop"
     transition:fade={{ duration: 200 }}
     role="presentation"
 >

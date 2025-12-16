@@ -1,0 +1,1 @@
+<h1>Wylogowano pomyślnie</h1>
