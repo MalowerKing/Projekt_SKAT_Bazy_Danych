@@ -5,6 +5,8 @@ import { encodeBase64url, encodeHexLowerCase } from '@oslojs/encoding';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
 import { error } from '@sveltejs/kit';
+import { encodeBase32LowerCase } from '@oslojs/encoding';
+import { verify, hash } from '@node-rs/argon2';
 
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
 
@@ -187,4 +189,55 @@ export function isValidPermissions(permissions: unknown): boolean {
 	} catch {
 		return false;
 	}
+}
+
+// Generate user ID
+export function generateUserId(): string {
+    const randomBytes = crypto.getRandomValues(new Uint8Array(16));
+    const uuid = encodeBase32LowerCase(randomBytes);
+	// Check if user ID already exists (very unlikely, but just in case)
+	if (!doesUserExistById(uuid)) {
+		return uuid;
+	}
+	// If collision occurs, recursively generate a new ID
+	return generateUserId();
+}
+
+// Hash password
+export async function hashPassword(password: string): Promise<string> {
+	return await hash(password, {
+		memoryCost: 19456,
+		timeCost: 2,
+		outputLen: 32,
+		parallelism: 1
+	});
+}
+
+// Verify password
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+	return await verify(hash, password);
+}
+
+// Check if users exists by ID
+export async function doesUserExistById(userId: string): Promise<boolean> {
+	const users = await db.select().from(table.user).where(eq(table.user.id, userId)).limit(1);
+	return users.length > 0;
+}
+
+// Check if user exists by username
+export async function doesUserExistByUsername(username: string): Promise<boolean> {
+	const users = await db.select().from(table.user).where(eq(table.user.nazwa, username)).limit(1);
+	return users.length > 0;
+}
+
+// Check if user exists by email
+export async function doesUserExistByEmail(email: string): Promise<boolean> {
+	const users = await db.select().from(table.user).where(eq(table.user.email, email)).limit(1);
+	return users.length > 0;
+}
+
+// Check if role exists by ID
+export async function doesRoleExistById(roleId: string): Promise<boolean> {
+	const roles = await db.select().from(table.role).where(eq(table.role.id, roleId)).limit(1);
+	return roles.length > 0;
 }

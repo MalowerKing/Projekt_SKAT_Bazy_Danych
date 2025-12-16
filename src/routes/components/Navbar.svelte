@@ -38,6 +38,7 @@
         <li><a href="/Pages/Rozgrywki" on:click={closeMenu}>Rozgrywki</a></li>
         <li><a href="/Pages/Rankingi" on:click={closeMenu}>Rankingi</a></li>
         <li><a href="/Pages/Role" on:click={closeMenu}>Role i uprawnienia</a></li>
+        <li><a href="/Pages/Moderacja" on:click={closeMenu}>Moderacja</a></li>
     </ul>
 
     <a href="/login?" class="btn-register" on:click={closeMenu}>

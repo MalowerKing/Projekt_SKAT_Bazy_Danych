@@ -1,4 +1,3 @@
-import { verify } from '@node-rs/argon2';
 import { fail, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import * as auth from '$lib/server/auth';
@@ -74,12 +73,7 @@ export const actions: Actions = {
         const user = users[0];
 
         // Verify password
-        const validPassword = await verify(user.passwordHash, password, {
-            memoryCost: 19456,
-            timeCost: 2,
-            outputLen: 32,
-            parallelism: 1
-        });
+        const validPassword = await auth.verifyPassword(password, user.passwordHash);
         
         if (!validPassword) {
             return fail(400, { invalidCredentials: true });
