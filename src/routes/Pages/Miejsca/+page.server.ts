@@ -1,10 +1,11 @@
-import { fail } from '@sveltejs/kit';
+import { fail, type Actions } from '@sveltejs/kit';
 import { db } from '$lib/server/db'; 
 import { miejsca, gra, user } from '$lib/server/db/schema';
 import { encodeBase32LowerCase } from '@oslojs/encoding';
 import type { PageServerLoad } from '../../$types';
+import { request } from 'http';
 
-export const actions = {
+export const actions: Actions = {
   // The 'default' action handles the form submission
   addMiejsce: async ({ request }) => {
     // 1. Get Form Data
