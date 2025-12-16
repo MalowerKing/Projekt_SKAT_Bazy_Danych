@@ -5,6 +5,7 @@ import { eq, inArray, desc } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/mysql-core';
 import type { PageServerLoad, Actions } from './$types';
 import { form } from '$app/server';
+import { isValidRoleID, isValidPermissions } from '$lib/server/auth';
 
 export const load: PageServerLoad = async (event) => {
     if (!event.locals.user) {
@@ -158,27 +159,5 @@ export const actions: Actions = {
         }
 
         return { success: true };
-    }
-}
-
-// Validate roleId aka. #player#
-function isValidRoleID(roleId: unknown): boolean {
-    if (typeof roleId !== 'string') {
-        return false;
-    }
-    const roleIdPattern = /^#[a-zA-Z0-9_]+#$/;
-    return roleIdPattern.test(roleId);
-}
-
-// Validate permissions aka. JSON format
-function isValidPermissions(permissions: unknown): boolean {
-    if (typeof permissions !== 'string') {
-        return false;
-    }
-    try {
-        const parsed = JSON.parse(permissions);
-        return typeof parsed === 'object' && parsed !== null;
-    } catch {
-        return false;
     }
 }
