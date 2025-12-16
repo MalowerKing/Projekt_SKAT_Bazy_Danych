@@ -262,5 +262,38 @@ removePlayer: async ({ request, params }) => {
       console.error("Błąd aktualizacji miejsca:", error);
       return fail(500, { message: "Nie udało się zapisać miejsca." });
     }
+  },
+  addPlayers: async ({ request }) => {
+    const formData = await request.formData();
+    
+    const turniejId = formData.get('turniej_id') as string;
+    // getAll pobiera wszystkie wartości o tej samej nazwie (np. z checkboxów)
+    const wybranigracze = formData.getAll('gracze') as string[];
+
+    if (!turniejId) {
+      return fail(400, { missing: true, message: 'Brak ID turnieju' });
+    }
+
+    if (wybranigracze.length === 0) {
+      return fail(400, { missing: true, message: 'Nie wybrano żadnych graczy' });
+    }
+
+    try {
+      // Przygotowanie tablicy obiektów do wstawienia
+      const noweWiersze = wybranigracze.map((graczId) => ({
+        primeID: crypto.randomUUID(), // Generujemy ID, bo to varchar PK
+        turniejID: turniejId,
+        graczID: graczId,
+        miejsce: null
+      }));
+
+      // Wykonanie jednego zapytania INSERT ... VALUES (...), (...), (...)
+      await db.insert(listaUczestnikowTurniej).values(noweWiersze);
+
+      return { success: true, count: wybranigracze.length };
+    } catch (error) {
+      console.error('Błąd dodawania graczy:', error);
+      return fail(500, { error: 'Błąd bazy danych podczas dodawania graczy.' });
+    }
   }
 };

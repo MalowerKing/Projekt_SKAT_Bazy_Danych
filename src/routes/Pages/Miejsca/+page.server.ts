@@ -1,9 +1,10 @@
 import { fail, type Actions } from '@sveltejs/kit';
 import { db } from '$lib/server/db'; 
-import { miejsca, gra, user } from '$lib/server/db/schema';
+import { miejsca, gra, user, turniej } from '$lib/server/db/schema';
 import { encodeBase32LowerCase } from '@oslojs/encoding';
 import type { PageServerLoad } from '../../$types';
 import { request } from 'http';
+import { eq, desc } from 'drizzle-orm';
 
 export const actions: Actions = {
   // The 'default' action handles the form submission
@@ -35,6 +36,65 @@ export const actions: Actions = {
 
     // 4. Return Success
     return { success: true, message: 'Form submitted successfully!' };
+  },
+  deletePlace: async ({ request }) => {
+    const formData = await request.formData();
+    const miejsceId = formData.get('miejsce_id')!.toString();
+
+
+    try {
+      // 2. Rozpoczęcie Transakcji
+      await db.transaction(async (tx) => {
+        
+        // KROK A: UPDATE Gra SET MiejsceID = NULL
+        // Używamy 'tx', a nie 'db', aby być wewnątrz transakcji
+        await tx
+          .update(gra)
+          .set({ miejsceID: null })
+          .where(eq(gra.miejsceID, miejsceId));
+
+        // KROK B: UPDATE Turniej SET MiejsceID = NULL
+        await tx
+          .update(turniej)
+          .set({ miejsceID: null })
+          .where(eq(turniej.miejsceID, miejsceId));
+
+        // KROK C: DELETE FROM Miejsca
+        await tx
+          .delete(miejsca)
+          .where(eq(miejsca.miejscaID, miejsceId));
+      });
+
+    } catch (error) {
+      console.error("Błąd transakcji usuwania miejsca:", error);
+      return fail(500, { message: "Nie udało się usunąć miejsca. Zmiany cofnięte." });
+    }
+  },
+  szukajWMiejscu: async ({ request }) => {
+    const data = await request.formData();
+    const miejsceId = data.get('miejsce_id')!.toString();
+
+    try {
+      const turnieje = await db
+        .select({
+          idTurnieju: turniej.turniejID,
+          nazwaTurnieju: turniej.nazwa,
+          data: turniej.data,
+          godzina: turniej.godzina,
+          tworca: user.nazwa,
+          miejsce: miejsca.nazwa
+        })
+        .from(turniej)
+        .leftJoin(user, eq(turniej.tworcaID, user.id))
+        .innerJoin(miejsca, eq(turniej.miejsceID, miejsca.miejscaID))
+        .where(eq(turniej.miejsceID, miejsceId))
+        .orderBy(desc(turniej.data), desc(turniej.godzina));
+
+      return { success: true, turnieje };
+    } catch (error) {
+      console.error(error);
+      return fail(500, { error: 'Błąd bazy danych' });
+    }
   }
 };
 
