@@ -29,7 +29,7 @@ export const actions: Actions = {
 			return fail(400, { message: 'Invalid password (min 6, max 255 characters)' });
 		}
 
-		const results = await db.select().from(table.user).where(eq(table.user.username, username));
+		const results = await db.select().from(table.user).where(eq(table.user.nazwa, username));
 
 		const existingUser = results.at(0);
 		if (!existingUser) {
@@ -77,16 +77,9 @@ export const actions: Actions = {
 			try {
 				await db.insert(table.user).values({ 
                 id: userId, 
-                username: username, 
-                passwordHash: passwordHash,
-                
-                // 1. 'nazwa' is .notNull() in schema, so it is REQUIRED here.
-                // We use the username as the default display name.
-                nazwa: username, 
-
-                // 2. 'elo' has a .default(1000) in schema, so we can skip it (or set it manually)
-                // 3. 'role' is nullable in schema (no .notNull()), so we can skip it
-                // 4. 'age' is nullable in schema, so we can skip it
+				nazwa: username,
+				email: '',
+                passwordHash: passwordHash
             });
 			} catch (error) {
 				console.log(error);

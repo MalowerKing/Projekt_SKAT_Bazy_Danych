@@ -16,11 +16,10 @@ export const roleRelations = relations(role, ({ many }) => ({
 
 export const user = mysqlTable('user', {
     id: varchar('id', { length: 255 }).primaryKey(),
-    age: int('age'),
-    username: varchar('username', { length: 32 }).notNull().unique(),
+    nazwa: varchar('nazwa', { length: 32 }).notNull().unique(),
+    email: varchar('email', { length: 255 }).notNull().unique(),
     passwordHash: varchar('password_hash', { length: 255 }).notNull(),
-    nazwa: varchar('nazwa', { length: 255 }).notNull(),
-    role: varchar('role_id', { length: 255 }).references(() => role.id),
+    role: varchar('role_id', { length: 255 }).references(() => role.id).default('#player#'),
     elo: int('elo').default(1000),
 });
 

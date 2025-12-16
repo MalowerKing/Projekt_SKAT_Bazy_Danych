@@ -86,9 +86,13 @@ export const actions: Actions = {
 			// Compute new ranks if ranked game
 			if (isRanked) {
 				// Download current ranks
-				const gracz1Rank = gracz1Data[0].elo ?? 1000;
-				const gracz2Rank = gracz2Data[0].elo ?? 1000;
-				const gracz3Rank = gracz3Data[0].elo ?? 1000;
+				const gracz1Rank = gracz1Data[0].elo;
+				const gracz2Rank = gracz2Data[0].elo;
+				const gracz3Rank = gracz3Data[0].elo;
+
+				if (gracz1Rank === null || gracz2Rank === null || gracz3Rank === null) {
+					return fail(500, { databaseError: true, message: 'Jeden z graczy nie posiada rankingu ELO.' });
+				}
 
 				// Calculate new ranks
 				const newRanks = calculateNewEloRank(
