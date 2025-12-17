@@ -48,73 +48,82 @@ export const load: PageServerLoad = async (event) => {
 }
 
 export const actions: Actions = {
-    addGame: async ({request}) => {
-		const formData = await request.formData();
-		const gracz1 = formData.get('gracz1') as string;
-		const gracz2 = formData.get('gracz2') as string;
-		const gracz3 = formData.get('gracz3') as string;
-		const zwyciezca = formData.get('zwyciezca') as string;
-		const miejsce = formData.get('miejsceNazwa') as string;
-		const data = formData.get('data') as string;
-		const rozgrywka = formData.get('TurniejNazwa') as string;
-		const isRanked = formData.get('isRanked') === 'on';
+    addGame: async ({ request }) => {
+    const formData = await request.formData();
+    const gracz1 = formData.get('gracz1') as string;
+    const gracz2 = formData.get('gracz2') as string;
+    const gracz3 = formData.get('gracz3') as string; // Może być pusty string
+    const zwyciezca = formData.get('zwyciezca') as string;
+    const miejsce = formData.get('miejsceNazwa') as string;
+    const data = formData.get('data') as string;
+    const rozgrywka = formData.get('TurniejNazwa') as string;
+    const isRanked = formData.get('isRanked') === 'on';
 
-		if (!gracz1 || !gracz2 || !gracz3 || !zwyciezca || !miejsce || !rozgrywka) {
-			return fail(400, {missing: true, message: 'Nie uzupełniono wszytskich danych formularza!'});
-		}
+    // POPRAWKA 1: Usunięto !gracz3 z warunku walidacji
+    if (!gracz1 || !gracz2 || !zwyciezca || !miejsce) {
+        return fail(400, { missing: true, message: 'Nie uzupełniono wymaganych danych formularza (Gracz 1, Gracz 2, Zwycięzca, Miejsce)!' });
+    }
 
-		try {
-			// Download IDs from names
-			const gracz1Data = await db.select().from(user).where(eq(user.nazwa, gracz1)).limit(1);
-			const gracz2Data = await db.select().from(user).where(eq(user.nazwa, gracz2)).limit(1);
-			const gracz3Data = await db.select().from(user).where(eq(user.nazwa, gracz3)).limit(1);
-			const zwyciezcaData = await db.select().from(user).where(eq(user.nazwa, zwyciezca)).limit(1);
-			const miejsceData = await db.select().from(miejsca).where(eq(miejsca.nazwa, miejsce)).limit(1);
-			const turniejData = await db.select().from(turniej).where(eq(turniej.nazwa, rozgrywka)).limit(1);
+    try {
+        const gracz1Data = await db.select().from(user).where(eq(user.nazwa, gracz1)).limit(1);
+        const gracz2Data = await db.select().from(user).where(eq(user.nazwa, gracz2)).limit(1);
+        const gracz3Data = gracz3 ? await db.select().from(user).where(eq(user.nazwa, gracz3)).limit(1) : [];
+        const zwyciezcaData = await db.select().from(user).where(eq(user.nazwa, zwyciezca)).limit(1);
+        const miejsceData = await db.select().from(miejsca).where(eq(miejsca.nazwa, miejsce)).limit(1);
+        const turniejData = await db.select().from(turniej).where(eq(turniej.nazwa, rozgrywka)).limit(1);
 
-			// Add game to database
-			await db.insert(gra).values({
-				graID: randomUUID(),
-				graczID1: gracz1Data[0].id,
-				graczID2: gracz2Data[0].id,
-				graczID3: gracz3Data[0].id,
-				zwyciezca: zwyciezcaData[0].id,
-				miejsceID: miejsceData[0].miejscaID,
-				turniejID: turniejData[0].turniejID,
-				isRanked: isRanked,
-				data: new Date(data)
-			});
+        if (gracz1Data.length === 0) return fail(400, { message: `Nie znaleziono gracza: ${gracz1}` });
+        if (gracz2Data.length === 0) return fail(400, { message: `Nie znaleziono gracza: ${gracz2}` });
+        if (gracz3 && gracz3Data.length === 0) return fail(400, { message: `Nie znaleziono gracza: ${gracz3}` });
+        if (zwyciezcaData.length === 0) return fail(400, { message: `Nie znaleziono zwycięzcy w bazie: ${zwyciezca}` });
+        if (miejsceData.length === 0) return fail(400, { message: `Nie znaleziono miejsca: ${miejsce}` });
+        const turniejID = turniejData.length > 0 ? turniejData[0].turniejID : null;
 
-			// Compute new ranks if ranked game
-			if (isRanked) {
-				// Download current ranks
-				const gracz1Rank = gracz1Data[0].elo;
-				const gracz2Rank = gracz2Data[0].elo;
-				const gracz3Rank = gracz3Data[0].elo;
 
-				if (gracz1Rank === null || gracz2Rank === null || gracz3Rank === null) {
-					return fail(500, { databaseError: true, message: 'Jeden z graczy nie posiada rankingu ELO.' });
-				}
+        await db.insert(gra).values({
+            graID: randomUUID(),
+            graczID1: gracz1Data[0].id,
+            graczID2: gracz2Data[0].id,
+            graczID3: gracz3Data.length > 0 ? gracz3Data[0].id : null, // Obsługa braku gracza 3
+            zwyciezca: zwyciezcaData[0].id,
+            miejsceID: miejsceData[0].miejscaID,
+            turniejID: turniejID,
+            isRanked: isRanked,
+            data: new Date(data)
+        });
 
-				// Calculate new ranks
-				const newRanks = calculateNewEloRank(
-					gracz1Rank, 
-					gracz2Rank, 
-					gracz3Rank,
-					zwyciezca === gracz1 ? 1 : (zwyciezca === gracz2 ? 2 : 3)
-				);
+        if (isRanked) {
+            if (!gracz3Data.length) {
+                 console.warn("Pominięto ranking - brak 3 gracza (logika ELO wymaga 3 osób)");
+            } else {
+                const gracz1Rank = gracz1Data[0].elo;
+                const gracz2Rank = gracz2Data[0].elo;
+                const gracz3Rank = gracz3Data[0].elo;
 
-				// Update ranks in database
-				await db.update(user).set({ elo: newRanks.player1NewRank }).where(eq(user.id, gracz1Data[0].id));
-				await db.update(user).set({ elo: newRanks.player2NewRank }).where(eq(user.id, gracz2Data[0].id));
-				await db.update(user).set({ elo: newRanks.player3NewRank }).where(eq(user.id, gracz3Data[0].id));
-			}
+                if (gracz1Rank === null || gracz2Rank === null || gracz3Rank === null) {
+                    return fail(500, { databaseError: true, message: 'Jeden z graczy nie posiada rankingu ELO.' });
+                }
 
-			
-		} catch (error) {
-			return fail(500, { databaseError: true, message: 'Wystąpił błąd podczas dodawania gry do bazy danych.' });
-		}
-	},
+                const newRanks = calculateNewEloRank(
+                    gracz1Rank, 
+                    gracz2Rank, 
+                    gracz3Rank,
+                    zwyciezca === gracz1 ? 1 : (zwyciezca === gracz2 ? 2 : 3)
+                );
+
+                await db.update(user).set({ elo: newRanks.player1NewRank }).where(eq(user.id, gracz1Data[0].id));
+                await db.update(user).set({ elo: newRanks.player2NewRank }).where(eq(user.id, gracz2Data[0].id));
+                await db.update(user).set({ elo: newRanks.player3NewRank }).where(eq(user.id, gracz3Data[0].id));
+            }
+        }
+
+        return { success: true };
+
+    } catch (error) {
+        console.error(error); // Ważne dla debugowania
+        return fail(500, { databaseError: true, message: 'Wystąpił błąd serwera.' });
+    }
+},
 
     delete: async ({ request }) => {
         const formData = await request.formData();

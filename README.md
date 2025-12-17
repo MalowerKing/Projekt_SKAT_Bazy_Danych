@@ -18,7 +18,6 @@ Ten dokument opisuje architekturę backendową, schemat bazy danych oraz zależn
 
 🗄️ Schemat Bazy Danych i Relacje Shutterstock
 
-Poniżej znajduje się diagram **ERD** (Entity Relationship Diagram) przedstawiający zależności (Klucze Obce) między tabelami w systemie. Fragment kodu
 
 erDiagram
     **ROLE** ||--o{ **USER** : *przypisana do*
