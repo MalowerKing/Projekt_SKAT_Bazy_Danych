@@ -34,7 +34,6 @@ export async function createSession(token: string, userId: string) {
 export async function validateSessionToken(token: string) {
 	const sessionId = encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
 
-	// Pobieramy sesję, użytkownika ORAZ dane roli w jednym zapytaniu
 	const [result] = await db
 		.select({
 			user: table.user,
@@ -43,8 +42,6 @@ export async function validateSessionToken(token: string) {
 		})
 		.from(table.session)
 		.innerJoin(table.user, eq(table.session.userId, table.user.id))
-		// Left join na wypadek gdyby rola nie istniała (choć schema wymusza default), 
-		// ale bezpieczniej użyć innerJoin jeśli spójność danych jest pewna.
 		.innerJoin(table.role, eq(table.user.role, table.role.id))
 		.where(eq(table.session.id, sessionId));
 
@@ -70,7 +67,6 @@ export async function validateSessionToken(token: string) {
 			.where(eq(table.session.id, session.id));
 	}
 
-	// Parsowanie uprawnień z JSON (przechowywanych w bazie jako string)
 	let permissions: string[] = [];
 	try {
 		if (roleData && roleData.uprawnienia) {
@@ -84,7 +80,6 @@ export async function validateSessionToken(token: string) {
 		permissions = [];
 	}
 
-	// Zwracamy obiekt użytkownika rozszerzony o sparsowane uprawnienia
 	return {
 		session,
 		user: {
@@ -94,98 +89,91 @@ export async function validateSessionToken(token: string) {
 	};
 }
 
+// --- SESSION HELPERS ---
+// Type for session validation result
 export type SessionValidationResult = Awaited<ReturnType<typeof validateSessionToken>>;
 
+// Invalidate session by ID
 export async function invalidateSession(sessionId: string) {
 	await db.delete(table.session).where(eq(table.session.id, sessionId));
 }
 
+// Set session token cookie
 export function setSessionTokenCookie(event: RequestEvent, token: string, expiresAt: Date) {
 	event.cookies.set(sessionCookieName, token, { expires: expiresAt, path: '/' });
 }
 
+// Delete session token cookie
 export function deleteSessionTokenCookie(event: RequestEvent) {
 	event.cookies.delete(sessionCookieName, { path: '/' });
 }
 
-// --- LOGIKA WERYFIKACJI RÓL I UPRAWNIEŃ ---
+// --- AUTHORIZATION HELPERS ---
 
-/**
- * Sprawdza, czy użytkownik posiada daną rolę (po ID, np. '#admin#').
- */
+// Check if user has specific role
 export function hasRole(user: SessionValidationResult['user'], roleId: string): boolean {
 	return user?.role === roleId;
 }
 
-/**
- * Sprawdza, czy użytkownik posiada dane uprawnienie (string w tablicy JSON).
- */
+// Check if user has specific permission
 export function hasPermission(user: SessionValidationResult['user'], permission: string): boolean {
 	if (!user || !user.permissions) return false;
 	return user.permissions.includes(permission);
 }
 
-/**
- * Blokuje żądanie (rzuca błąd 403), jeśli użytkownik nie ma wymaganej roli.
- * Do użycia w plikach +page.server.ts.
- */
+// Require user to have specific role
 export function requireRole(locals: App.Locals, roleId: string) {
 	if (!locals.user || locals.user.role !== roleId) {
 		error(403, `Odmowa dostępu. Wymagana rola: ${roleId}`);
 	}
 }
 
-/**
- * Blokuje żądanie (rzuca błąd 403), jeśli użytkownik nie ma wymaganego uprawnienia.
- * Do użycia w plikach +page.server.ts.
- */
+// Require user to have specific permission
 export function requirePermission(locals: App.Locals, permission: string) {
 	if (!locals.user || !hasPermission(locals.user, permission)) {
 		error(403, `Odmowa dostępu. Wymagane uprawnienie: ${permission}`);
 	}
 }
 
-// --- WALIDATORY DANYCH WEJŚCIOWYCH ---
+// --- VALIDATORS ---
 
-// Walidacja nazwy użytkownika
+// Username validation
 export function isValidUsername(username: unknown): boolean {
 	if (typeof username !== 'string') return false;
 	return username.length >= 3 && username.length <= 31 && /^[a-zA-Z0-9]{3,31}$/.test(username);
 }
 
-// Walidacja hasła
+// Password validation
 export function isValidPassword(password: unknown): boolean {
 	if (typeof password !== 'string') return false;
 	return password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password) && password.length <= 255;
 }
 
-// Walidacja emaila
+// Email validation
 export function isValidEmail(email: unknown): boolean {
 	if (typeof email !== 'string') return false;
 	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 	return emailRegex.test(email);
 }
 
-// Walidacja ID roli (format: #[nazwa_roli]#)
+// Role ID validation
 export function isValidRoleID(roleId: unknown): boolean {
 	if (typeof roleId !== 'string') {
 		return false;
 	}
-	// Regex wymusza start i koniec na #, a w środku litery, cyfry lub podkreślniki
+	
 	const roleIdPattern = /^#[a-zA-Z0-9_]+#$/;
 	return roleIdPattern.test(roleId);
 }
 
-// Walidacja uprawnień (musi być poprawnym JSON-em)
+// Json validation for permissions
 export function isValidPermissions(permissions: unknown): boolean {
 	if (typeof permissions !== 'string') {
 		return false;
 	}
 	try {
-		const parsed = JSON.parse(permissions);
-		// Dodatkowo sprawdzamy, czy to tablica (bo tak chcemy trzymać uprawnienia)
-		// Jeśli chcesz pozwalać na dowolny obiekt JSON, usuń warunek Array.isArray
-		return Array.isArray(parsed);
+		JSON.parse(permissions);
+		return true;
 	} catch {
 		return false;
 	}

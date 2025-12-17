@@ -89,10 +89,9 @@
             </div>
             <div class="form-group">
                 <label>Rola
-                    <select name="role" required>
-                        <option value="user">Użytkownik (user)</option>
-                        <option value="admin">Administrator (admin)</option>
-                    </select>
+                    <label>
+                        <input type="code" name="role" placeholder="#rola#" value="#player#" required />
+                    </label>
                 </label>
             </div>
             <div class="form-group">
