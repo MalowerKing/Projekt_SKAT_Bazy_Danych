@@ -19,17 +19,27 @@ export const load: PageServerLoad = async (event) => {
 
     return {
         turnieje: await db.select({
+            id: turniej.turniejID,
             nazwa: turniej.nazwa,
             godzina: turniej.godzina,
+            data: turniej.data,
             adres: miejsca.adres,
             miasto: miejsca.miasto,
+            miejsceID: turniej.miejsceID,
             zwyciezca: zwyciezca.nazwa,
-            twórcaTurnieju: twórcaTurnieju.nazwa
+            twórcaTurnieju: twórcaTurnieju.nazwa,
+            zwyciezcaID: turniej.zwyciezcaID
         }).from(turniej)
         .leftJoin(twórcaTurnieju, eq(turniej.tworcaID, twórcaTurnieju.id))
         .leftJoin(zwyciezca, eq(turniej.zwyciezcaID, zwyciezca.id))
         .leftJoin(miejsca, eq(turniej.miejsceID, miejsca.miejscaID)),
-        places: places
+        places: places,
+        graczeTurnieje: await db.select({
+          idTurniej: listaUczestnikowTurniej.turniejID,
+          gracz_id: listaUczestnikowTurniej.graczID,
+          gracz_nazwa: user.nazwa,
+          miejsce: listaUczestnikowTurniej.miejsce
+        }).from(listaUczestnikowTurniej).leftJoin(user, eq(listaUczestnikowTurniej.graczID, user.id))
     }
 }
 
@@ -180,31 +190,49 @@ export const actions: Actions = {
     // 3. Redirect after success (since the current page no longer exists)
     //throw redirect(303, '/turnieje'); 
   },
-  dodanieGraczDoTurnieju: async ({ request, params }) => {
+  dodanieGraczDoTurnieju: async ({ request }) => {
     const formData = await request.formData();
-    const graczId = formData.get('gracz_id')!.toString();
-    const turniejId = formData.get('turniejId')!.toString();
+    
+    // Pobieramy dane z formularza po atrybucie 'name'
+    const graczNazwa = formData.get('nazwaGracz')?.toString();
+    const turniejId = formData.get('turniejId')?.toString();
+
+    // Prosta walidacja, aby uniknąć błędu 'Cannot read properties of null'
+    if (!graczNazwa || !turniejId) {
+        return fail(400, { message: "Brakujące dane: nazwa gracza lub ID turnieju." });
+    }
 
     try {
-      // 2. Wykonanie INSERT
-      await db.insert(listaUczestnikowTurniej).values({
-        primeID: randomUUID(),
-        turniejID: turniejId,
-        graczID: graczId
-      });
+        // 1. Szukamy ID gracza w tabeli 'user' na podstawie nazwy
+        const foundUser = await db.select({ id: user.id })
+            .from(user)
+            .where(eq(user.nazwa, graczNazwa))
+            .limit(1);
 
-      return { success: true };
+        if (foundUser.length === 0) {
+            return fail(400, { message: `Nie znaleziono gracza o nazwie: ${graczNazwa}` });
+        }
+
+        const graczId = foundUser[0].id;
+
+        // 2. Wstawiamy gracza do listy uczestników turnieju
+        await db.insert(listaUczestnikowTurniej).values({
+            primeID: randomUUID(),
+            turniejID: turniejId,
+            graczID: graczId
+        });
+
+        return { success: true, message: `Dodano gracza ${graczNazwa} do turnieju.` };
 
     } catch (error: any) {
-      console.error("Błąd dodawania uczestnika:", error);
+        console.error("Błąd dodawania uczestnika:", error);
+        
+        // Obsługa błędu unikalności (jeśli gracz już jest w tym turnieju)
+        if (error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {
+            return fail(400, { message: "Ten gracz jest już zapisany do tego turnieju." });
+        }
 
-      // Opcjonalnie: Obsługa błędu unikalności (jeśli gracz jest już w turnieju)
-      // Kod 23505 to błąd "unique_violation" w Postgres
-      if (error.code === '23505') {
-        return fail(400, { message: "Ten gracz jest już zapisany do turnieju." });
-      }
-
-      return fail(500, { message: "Nie udało się dodać uczestnika." });
+        return fail(500, { message: "Wystąpił błąd bazy danych." });
     }
 },
 removePlayer: async ({ request, params }) => {

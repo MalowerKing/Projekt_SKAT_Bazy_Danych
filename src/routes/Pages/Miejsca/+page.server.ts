@@ -39,7 +39,7 @@ export const actions: Actions = {
   },
   deletePlace: async ({ request }) => {
     const formData = await request.formData();
-    const miejsceId = formData.get('miejsce_id')!.toString();
+    const miejsceId = formData.get('miejsceId')!.toString();
 
 
     try {
@@ -101,6 +101,7 @@ export const actions: Actions = {
 export const load: PageServerLoad = async ({ params }) => {
     return {
             post: await db.select({
+                id: miejsca.miejscaID,
                 nazwa: miejsca.nazwa,
                 adres: miejsca.adres,
                 miasto: miejsca.miasto
