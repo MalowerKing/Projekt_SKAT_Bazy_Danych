@@ -1,44 +1,65 @@
-import * as auth from '$lib/server/auth';
-import { fail, redirect } from '@sveltejs/kit';
-import { getRequestEvent } from '$app/server';
+import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { drizzle } from 'drizzle-orm/mysql2';
 import { db } from '$lib/server/db';
-import { eq, and, asc} from 'drizzle-orm';
-import { gra, listaUczestnikowTurniej, miejsca, turniej, user, zaproszenia } from '$lib/server/db/schema';
-import { alias } from 'drizzle-orm/mysql-core';
-import { request } from 'http';
-import { fromAction } from 'svelte/attachments';
-import { randomUUID } from 'crypto';
+import { eq, and, asc, ne } from 'drizzle-orm';
+import { zaproszenia, turniej, user, listaUczestnikowTurniej } from '$lib/server/db/schema';
+import { encodeBase32LowerCase } from '@oslojs/encoding';
 
-const generateId = () => randomUUID();
 
-export const load: PageServerLoad = async ({event}) => {
-    // Przykład: Pobranie ID zalogowanego gracza (zależy od Twojej auth)
-    // const currentUserId = locals.user?.id; 
-    
-    // Dla celów demo pobieramy ID z query params, np. ?graczId=...
-    const currentUserId = event.locals.id;
-    
+function generateUserId() {
+    // ID with 120 bits of entropy, or about the same as UUID v4.
+    const bytes = crypto.getRandomValues(new Uint8Array(15));
+    const id = encodeBase32LowerCase(bytes);
+    return id;
+}
+
+export const load: PageServerLoad = async ({ locals }) => {
+    if (!locals.user) {
+        return { 
+            mojeZaproszenia: [], 
+            currentUserId: null, 
+            wszyscyGracze: [], 
+            wszystkieTurnieje: [] 
+        };
+    }
+
+    // 1. Pobieranie moich zaproszeń
+    const mojeZaproszenia = await db
+        .select({
+            idZaproszenia: zaproszenia.primeID,
+            idTurnieju: turniej.turniejID,
+            nazwaTurnieju: turniej.nazwa,
+            dataTurnieju: turniej.data,
+            godzinaStartu: turniej.godzina,
+            miejsce: listaUczestnikowTurniej.miejsce 
+        })
+        .from(zaproszenia)
+        .innerJoin(turniej, eq(zaproszenia.turniejID, turniej.turniejID))
+        .leftJoin(listaUczestnikowTurniej, and(
+            eq(listaUczestnikowTurniej.turniejID, zaproszenia.turniejID),
+            eq(listaUczestnikowTurniej.graczID, locals.user.id)
+        ))
+        .where(eq(zaproszenia.graczID, locals.user.id))
+        .orderBy(asc(turniej.data));
+
+    // 2. Pobieranie wszystkich INNYCH graczy (do wysłania zaproszenia)
+    const wszyscyGracze = await db
+        .select({ id: user.id, nazwa: user.nazwa })
+        .from(user)
+        .where(ne(user.id, locals.user.id)) // Nie zapraszamy samych siebie
+        .orderBy(asc(user.nazwa));
+
+    // 3. Pobieranie wszystkich turniejów
+    const wszystkieTurnieje = await db
+        .select({ id: turniej.turniejID, nazwa: turniej.nazwa })
+        .from(turniej)
+        .orderBy(asc(turniej.nazwa));
 
     return {
-        // • Wypisanie wszystkich zaproszeń dla gracza
-        mojeZaproszenia: currentUserId ? await db
-            .select({
-                idZaproszenia: zaproszenia.primeID,
-                idTurnieju: turniej.turniejID,
-                nazwaTurnieju: turniej.nazwa,
-                dataTurnieju: turniej.data,
-                godzinaStartu: turniej.godzina
-            })
-            .from(zaproszenia)
-            .innerJoin(turniej, eq(zaproszenia.turniejID, turniej.turniejID))
-            .where(eq(zaproszenia.graczID, currentUserId))
-            .orderBy(asc(turniej.data)) 
-            : [],
-
-        // • Wypisanie wszystkich zaproszeń na konkretny turniej
-        
+        mojeZaproszenia,
+        currentUserId: locals.user.id,
+        wszyscyGracze,
+        wszystkieTurnieje
     };
 };
 
@@ -56,7 +77,7 @@ export const actions = {
 
         try {
             await db.insert(zaproszenia).values({
-                primeID: generateId(),
+                primeID: generateUserId(),
                 graczID: graczId,
                 turniejID: turniejId,
             });
@@ -122,7 +143,7 @@ export const actions = {
             await db.transaction(async (tx) => {
                 // 1. INSERT do listy uczestników
                 await tx.insert(listaUczestnikowTurniej).values({
-                    primeID: generateId(),
+                    primeID: generateUserId(),
                     turniejID: turniejId,
                     graczID: graczId,
                     miejsce: null // Drizzle ustawi NULL domyślnie, ale można jawnie
@@ -144,24 +165,29 @@ export const actions = {
             return fail(500, { message: 'Błąd transakcji akceptacji' });
         }
     },
-    zobaczZaproszenia: async ({request}) =>{
+    zobaczZaproszenia: async ({ request }) => {
         const formData = await request.formData();
+        const viewTurniejId = formData.get('turniejId')?.toString();
 
-    const viewTurniejId = formData.get('turniejId')!.toString();
+        if (!viewTurniejId) return fail(400, { message: 'Brak ID turnieju' });
 
-    viewTurniejId ? await db
-            .select({
-                idZaproszenia: zaproszenia.primeID,
-                idGracza: user.id,
-                zaproszonyGracz: user.nazwa,
-                nazwaTurnieju: turniej.nazwa
-            })
-            .from(zaproszenia)
-            .innerJoin(user, eq(zaproszenia.graczID, user.id))
-            .innerJoin(turniej, eq(zaproszenia.turniejID, turniej.turniejID))
-            .where(eq(zaproszenia.turniejID, viewTurniejId))
-            .orderBy(asc(user.nazwa))
-            : []
+        try {
+            const listaZaproszonych = await db
+                .select({
+                    idZaproszenia: zaproszenia.primeID,
+                    idGracza: user.id,
+                    zaproszonyGracz: user.nazwa,
+                    nazwaTurnieju: turniej.nazwa
+                })
+                .from(zaproszenia)
+                .innerJoin(user, eq(zaproszenia.graczID, user.id))
+                .innerJoin(turniej, eq(zaproszenia.turniejID, turniej.turniejID))
+                .where(eq(zaproszenia.turniejID, viewTurniejId))
+                .orderBy(asc(user.nazwa));
 
+            return { success: true, list: listaZaproszonych };
+        } catch (error) {
+            return fail(500, { message: 'Błąd podczas pobierania listy' });
+        }
     }
 } satisfies Actions;
