@@ -64,7 +64,8 @@ export const actions: Actions = {
         const formData = await event.request.formData();
         const roleId = formData.get('roleId');
 
-        if (typeof roleId !== 'string') {
+        // POPRAWKA: Sprawdzenie czy string nie jest pusty
+        if (!roleId || typeof roleId !== 'string') {
             return fail(400, { invalidInput: true });
         }
 

@@ -69,7 +69,8 @@ describe('Miejsca Page Server', () => {
 			const result = await load(event as any);
 
 			expect(db.select).toHaveBeenCalled();
-			expect(result.miejsca).toEqual(mockMiejsca);
+            // POPRAWKA: load zwraca { post: ... }, a nie { miejsca: ... }
+			expect(result.post).toEqual(mockMiejsca);
 		});
 	});
 

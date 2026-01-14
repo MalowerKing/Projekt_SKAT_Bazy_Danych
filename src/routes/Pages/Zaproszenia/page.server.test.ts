@@ -73,19 +73,17 @@ describe('Page Server Load & Actions', () => {
 	describe('actions', () => {
 		it('wyslijZaproszenie: powinien zwrócić sukces przy poprawnych danych', async () => {
 			const formData = new FormData();
-			formData.append('receiverId', 'user-2');
+            // POPRAWKA: Dostosowanie pól formularza do wymagań akcji (graczId, turniejId)
+			formData.append('graczId', 'user-2');
+            formData.append('turniejId', 'turniej-1');
+
 			const event = { 
 				request: { formData: () => Promise.resolve(formData) },
 				locals: { user: mockUser }
 			};
 
-			// Mockujemy, że odbiorca ISTNIEJE.
-			// Pierwsze zapytanie select sprawdza usera -> zwracamy [{ id: 'user-2' }]
 			mockChain.then.mockImplementationOnce((resolve: any) => resolve([{ id: 'user-2' }]));
 			
-			// Jeśli jest drugie zapytanie (np. sprawdzanie czy zaproszenie już istnieje),
-			// to drugie wywołanie 'then' zwróci [] (brak duplikatu), bo beforeEach tak ustawia (lub domyślnie).
-
 			const result = await actions.wyslijZaproszenie(event as any);
 			
 			expect(db.insert).toHaveBeenCalled();
@@ -105,8 +103,8 @@ describe('Page Server Load & Actions', () => {
 
 		it('akceptujZaproszenie: powinien wykonać transakcję (insert + delete)', async () => {
 			const formData = new FormData();
-			formData.append('zaproszenieId', '1');
-			formData.append('senderId', 'user-99');
+			formData.append('turniejId', '1');
+			formData.append('graczId', 'user-99');
 			const event = { 
 				request: { formData: () => Promise.resolve(formData) },
 				locals: { user: mockUser }

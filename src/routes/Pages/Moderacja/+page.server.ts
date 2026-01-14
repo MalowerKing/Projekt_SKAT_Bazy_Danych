@@ -26,8 +26,8 @@ export const actions: Actions = {
         const formData = await event.request.formData();
         const userIds = formData.getAll('userIds');
 
-        // Validate input
-        if (!Array.isArray(userIds) || !userIds.every(id => typeof id === 'string')) {
+        // Validate input: Musi być tablica, same stringi i NIE MOŻE być pusta
+        if (!Array.isArray(userIds) || !userIds.every(id => typeof id === 'string') || userIds.length === 0) {
             return fail(400, { invalidInput: true });
         }
 
@@ -48,7 +48,7 @@ export const actions: Actions = {
         const emails = formData.getAll('emails');
 
         // Validate input
-        if (!Array.isArray(emails) || !emails.every(email => typeof email === 'string')) {
+        if (!Array.isArray(emails) || !emails.every(email => typeof email === 'string') || emails.length === 0) {
             return fail(400, { invalidInput: true });
         }
 
@@ -76,7 +76,7 @@ export const actions: Actions = {
         const usernames = formData.getAll('usernames');
 
         // Validate input
-        if (!Array.isArray(usernames) || !usernames.every(username => typeof username === 'string')) {
+        if (!Array.isArray(usernames) || !usernames.every(username => typeof username === 'string') || usernames.length === 0) {
             return fail(400, { invalidInput: true });
         }
 

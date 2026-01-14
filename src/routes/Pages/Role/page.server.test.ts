@@ -8,12 +8,14 @@ const { mockChain } = vi.hoisted(() => {
 		where: vi.fn(),
 		leftJoin: vi.fn(),
 		values: vi.fn(),
+		set: vi.fn(), // Dodano brakującą metodę 'set'
 		then: vi.fn((resolve) => resolve([])),
 	};
 	chain.from.mockReturnValue(chain);
 	chain.where.mockReturnValue(chain);
 	chain.leftJoin.mockReturnValue(chain);
 	chain.values.mockReturnValue(chain);
+	chain.set.mockReturnValue(chain); // Mock zwracania łańcucha dla 'set'
 	return { mockChain: chain };
 });
 
@@ -80,7 +82,7 @@ describe('Role Management Server Logic', () => {
 	describe('actions', () => {
 		it('powinien zwrócić fail(400) dla niepoprawnego ID roli', async () => {
 			const formData = new FormData();
-			formData.append('id', ''); 
+			formData.append('roleId', ''); 
 			const event = { request: { formData: () => Promise.resolve(formData) } };
 
 			const result = await actions.deleteRole(event as any);
@@ -89,14 +91,11 @@ describe('Role Management Server Logic', () => {
 
 		it('powinien dodać rolę, gdy walidacja przejdzie pomyślnie', async () => {
 			const formData = new FormData();
-			// Dodajemy 'id' oraz 'roleName', 'permissions' (jeśli są sprawdzane)
-			formData.append('id', 'new-role');
-			formData.append('roleName', 'NowaRola');
+			formData.append('roleId', 'new-role');
 			formData.append('permissions', '[]');
 			
 			const event = { request: { formData: () => Promise.resolve(formData) } };
 
-			// Symulacja: rola o takim ID nie istnieje (pusta tablica)
 			mockChain.then.mockImplementationOnce((resolve: any) => resolve([]));
 
 			const result = await actions.addRole(event as any);
@@ -106,7 +105,7 @@ describe('Role Management Server Logic', () => {
 		
 		it('nie powinien pozwolić na usunięcie roli #player#', async () => {
 			const formData = new FormData();
-			formData.append('id', 'player'); 
+			formData.append('roleId', '#player#'); 
 			const event = { request: { formData: () => Promise.resolve(formData) } };
 
 			const result = await actions.deleteRole(event as any);

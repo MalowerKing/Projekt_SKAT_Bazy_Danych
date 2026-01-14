@@ -19,6 +19,7 @@ const { mockChain } = vi.hoisted(() => {
 	return { mockChain: chain };
 });
 
+// POPRAWKA: Uzupełniono mock auth o brakujące funkcje używane w actions.addUser
 vi.mock('$lib/server/auth', async () => {
 	return {
 		requireLogin: vi.fn((locals) => {
@@ -32,7 +33,12 @@ vi.mock('$lib/server/auth', async () => {
 		isValidUsername: vi.fn(() => true),
 		isValidPassword: vi.fn(() => true),
 		isValidEmail: vi.fn(() => true),
-		isValidRoleID: vi.fn(() => true) // Dodano brakujący eksport
+		isValidRoleID: vi.fn(() => true),
+        doesUserExistByUsername: vi.fn(() => Promise.resolve(false)),
+        doesUserExistByEmail: vi.fn(() => Promise.resolve(false)),
+        doesRoleExistById: vi.fn(() => Promise.resolve(true)),
+        hashPassword: vi.fn(() => Promise.resolve('hashed_pass')),
+        generateUserId: vi.fn(() => 'new-user-id')
 	};
 });
 
@@ -79,10 +85,13 @@ describe('Admin Users Management - Page Server', () => {
 	describe('actions', () => {
 		it('powinien wykonać masowe usuwanie po ID', async () => {
 			const formData = new FormData();
-			formData.append('ids', '["id1", "id2"]');
+            // POPRAWKA: Akcja deleteUsers oczekuje wielu pól 'userIds', a nie JSONa
+			formData.append('userIds', 'id1');
+            formData.append('userIds', 'id2');
 			const event = { request: { formData: () => Promise.resolve(formData) } };
 
-			await actions.deleteSelected(event as any);
+            // POPRAWKA: Użycie właściwej nazwy akcji (deleteUsers zamiast deleteSelected)
+			await actions.deleteUsers(event as any);
 			expect(db.delete).toHaveBeenCalled();
 		});
 
@@ -90,7 +99,7 @@ describe('Admin Users Management - Page Server', () => {
 			const formData = new FormData();
 			const event = { request: { formData: () => Promise.resolve(formData) } };
 			
-			const result = await actions.deleteSelected(event as any);
+			const result = await actions.deleteUsers(event as any);
 			expect(result.status).toBe(400);
 		});
 
@@ -99,10 +108,8 @@ describe('Admin Users Management - Page Server', () => {
 			formData.append('username', 'NewUser');
 			formData.append('email', 'test@test.com');
 			formData.append('password', '123456');
-			formData.append('role', 'player');
-			// Dodajemy roleID, jeśli jest wymagane przez validację w kontrolerze
-			formData.append('roleID', 'player'); 
-
+			formData.append('role', 'player'); // Akcja pobiera 'role'
+			
 			// Symulacja, że użytkownik nie istnieje (pusta tablica)
 			mockChain.then.mockImplementationOnce((resolve: any) => resolve([])); 
 
