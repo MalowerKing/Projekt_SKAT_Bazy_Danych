@@ -1,3 +1,4 @@
+import * as auth from '$lib/server/auth';
 import { fail, type Actions } from '@sveltejs/kit';
 import { db } from '$lib/server/db'; 
 import { miejsca, gra, user, turniej } from '$lib/server/db/schema';
@@ -98,7 +99,8 @@ export const actions: Actions = {
   }
 };
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ locals }) => {
+    const sessionUser = auth.requireLogin(locals);
     return {
             post: await db.select({
                 id: miejsca.miejscaID,

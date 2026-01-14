@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { load, actions } from './+page.server';
 import { db } from '$lib/server/db';
 import { fail, redirect } from '@sveltejs/kit';
+import * as auth from '$lib/server/auth';
 
 // 1. Mockowanie Drizzle i modułów zewnętrznych
 vi.mock('$lib/server/db', () => ({
@@ -19,6 +20,16 @@ vi.mock('$lib/server/db', () => ({
         delete: vi.fn().mockReturnThis(),
     }
 }));
+
+vi.mock('$lib/server/auth', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('$lib/server/auth')>();
+    return {
+        ...actual, // To zachowuje Twoją funkcję requireLogin oraz inne (hashPassword itp.)
+        // Jeśli potrzebujesz szpiegować (spy) requireLogin, możesz to nadpisać tak:
+        requireLogin: vi.fn(actual.requireLogin), 
+    };
+});
+
 
 vi.mock('@sveltejs/kit', () => ({
     fail: vi.fn((status, data) => ({ status, ...data })),
@@ -40,11 +51,11 @@ describe('Gry Page Server', () => {
     });
 
     describe('load', () => {
-        it('powinien przekierować do /login, gdy brak sesji', async () => {
+        it('powinien przekierować do /loginrequired, gdy brak sesji', async () => {
             const event = { locals: { user: null } };
             
             await expect(load(event as any)).rejects.toThrow('Redirect');
-            expect(redirect).toHaveBeenCalledWith(302, '/login');
+            expect(redirect).toHaveBeenCalledWith(302, '/loginrequired');
         });
 
         it('powinien zwrócić listę gier dla zalogowanego użytkownika', async () => {

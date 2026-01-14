@@ -1,194 +1,207 @@
 <script>
-  // State for the mobile menu
-  let isOpen = false;
+	import { enhance } from '$app/forms';
 
-  // Toggle function
-  function toggleMenu() {
-    isOpen = !isOpen;
-  }
+	// Odbieramy dane użytkownika za pomocą $props() (Svelte 5)
+	let { user = null } = $props();
 
-  // Close menu when a link is clicked (UX best practice)
-  function closeMenu() {
-    isOpen = false;
-  }
+	// Stan menu mobilnego za pomocą $state() (Svelte 5)
+	let isOpen = $state(false);
+
+	function toggleMenu() {
+		isOpen = !isOpen;
+	}
+
+	function closeMenu() {
+		isOpen = false;
+	}
 </script>
 
 <nav>
-  <div class="logo">
-    <a href="/">MyBrand</a>
-  </div>
+	<div class="logo">
+		<a href="/">MyBrand</a>
+	</div>
 
-  <button 
-    class="hamburger" 
-    on:click={toggleMenu} 
-    aria-label="Toggle menu"
-    aria-expanded={isOpen}
-  >
-    <span class="bar"></span>
-    <span class="bar"></span>
-    <span class="bar"></span>
-  </button>
+	<button
+		class="hamburger"
+		onclick={toggleMenu}
+		aria-label="Toggle menu"
+		aria-expanded={isOpen}
+	>
+		<span class="bar"></span>
+		<span class="bar"></span>
+		<span class="bar"></span>
+	</button>
 
-  <div class="nav-links {isOpen ? 'active' : ''}">
-    <ul>
-      <li><a href="/" on:click={closeMenu}>Home</a></li>
-        <li><a href="/Pages/O mnie" on:click={closeMenu}>O mnie</a></li>
-        <li><a href="/Pages/Miejsca" on:click={closeMenu}>Miejsca</a></li>
-        <li><a href="/Pages/Turnieje" on:click={closeMenu}>Turnieje</a></li>
-        <li><a href="/Pages/Rozgrywki" on:click={closeMenu}>Rozgrywki</a></li>
-        <li><a href="/Pages/Rankingi" on:click={closeMenu}>Rankingi</a></li>
-        <li><a href="/Pages/Role" on:click={closeMenu}>Role i uprawnienia</a></li>
-        <li><a href="/Pages/Moderacja" on:click={closeMenu}>Moderacja</a></li>
-        <li><a href="/Pages/Zaproszenia" on:click={closeMenu}>Zaproszenia</a></li>
-    </ul>
+	<div class="nav-links {isOpen ? 'active' : ''}">
+		<ul>
+			<li><a href="/Pages/O mnie" onclick={closeMenu}>O mnie</a></li>
+			<li><a href="/Pages/Miejsca" onclick={closeMenu}>Miejsca</a></li>
+			<li><a href="/Pages/Turnieje" onclick={closeMenu}>Turnieje</a></li>
+			<li><a href="/Pages/Rozgrywki" onclick={closeMenu}>Rozgrywki</a></li>
+			<li><a href="/Pages/Rankingi" onclick={closeMenu}>Rankingi</a></li>
+			<li><a href="/Pages/Role" onclick={closeMenu}>Role i uprawnienia</a></li>
+			<li><a href="/Pages/Moderacja" onclick={closeMenu}>Moderacja</a></li>
+			<li><a href="/Pages/Zaproszenia" onclick={closeMenu}>Zaproszenia</a></li>
+		</ul>
 
-    <a href="/login?" class="btn-register" on:click={closeMenu}>
-      Zaloguj się
-    </a>
-  </div>
+		{#if user}
+			<form action="/?/logout" method="POST" use:enhance>
+				<button type="submit" class="btn-register" onclick={closeMenu}>
+					Wyloguj się
+				</button>
+			</form>
+		{:else}
+			<a href="/login" class="btn-register" onclick={closeMenu}>
+				Zaloguj się
+			</a>
+		{/if}
+	</div>
 </nav>
 
 <style>
-  /* --- General Styling --- */
-  nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: #333;
-    color: white;
-    padding: 1rem 2rem;
-    position: relative;
-  }
+	/* --- General Styling --- */
+	nav {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		background-color: #333;
+		color: white;
+		padding: 1rem 2rem;
+		position: relative;
+	}
 
-  a {
-    text-decoration: none;
-    color: white;
-    font-size: 1.1rem;
-    transition: color 0.3s;
-  }
+	a {
+		text-decoration: none;
+		color: white;
+		font-size: 1.1rem;
+		transition: color 0.3s;
+	}
 
-  a:hover {
-    color: #ff9900; /* Accent color */
-  }
+	a:hover {
+		color: #ff9900;
+	}
 
-  .logo a {
-    font-size: 1.5rem;
-    font-weight: bold;
-  }
+	.logo a {
+		font-size: 1.5rem;
+		font-weight: bold;
+	}
 
-  ul {
-    display: flex;
-    gap: 2rem;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
+	/* --- Navigation Links Container (Desktop) --- */
+	.nav-links {
+		display: flex;          /* KLUCZOWE: Ustawia listę linków i przycisk w jednej linii */
+		align-items: center;    /* Wyśrodkowanie w pionie */
+		gap: 2rem;              /* Odstęp między menu a przyciskiem */
+	}
 
-  /* --- Mobile Hamburger Button --- */
-  .hamburger {
-    display: none; /* Hidden on desktop */
-    flex-direction: column;
-    gap: 5px;
-    background: none;
-    border: none;
-    cursor: pointer;
-  }
+	/* Naprawa dla formularza, aby nie spadał do nowej linii */
+	.nav-links form {
+		display: flex;
+		margin: 0;
+	}
 
-  .hamburger .bar {
-    width: 25px;
-    height: 3px;
-    background-color: white;
-    border-radius: 2px;
-  }
+	ul {
+		display: flex;
+		gap: 1.5rem; /* Zmniejszyłem lekko gap, bo masz dużo elementów w menu */
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
 
-  /* --- Responsive Design (Mobile) --- */
-  @media (max-width: 768px) {
-    .hamburger {
-      display: flex; /* Show button on mobile */
-    }
+	/* --- Stylizacja przycisku Rejestracji/Wylogowania --- */
+	/* Używamy :global() aby styl działał na button wewnątrz formularza */
+	:global(.btn-register) {
+		background-color: #2563eb;
+		color: white;
+		padding: 0.5rem 1rem;
+		border-radius: 0.5rem;
+		font-weight: 600;
+		font-size: 1rem;
+		transition: background-color 0.2s;
+		white-space: nowrap;
+		
+		/* Reset stylów dla <button> */
+		border: none;
+		cursor: pointer;
+		font-family: inherit;
+		display: inline-block;
+		text-decoration: none;
+		line-height: normal;
+	}
 
-    .nav-links {
-      display: none; /* Hide links by default on mobile */
-      width: 100%;
-      position: absolute;
-      top: 100%;
-      left: 0;
-      background-color: #444;
-      flex-direction: column;
-    }
+	:global(.btn-register:hover) {
+		background-color: #1d4ed8;
+		color: white;
+		text-decoration: none;
+	}
 
-    .nav-links.active {
-      display: flex; /* Show links when 'active' class is added */
-    }
+	/* --- Mobile Hamburger Button --- */
+	.hamburger {
+		display: none;
+		flex-direction: column;
+		gap: 5px;
+		background: none;
+		border: none;
+		cursor: pointer;
+	}
 
-    ul {
-      flex-direction: column;
-      width: 100%;
-      gap: 0;
-    }
+	.hamburger .bar {
+		width: 25px;
+		height: 3px;
+		background-color: white;
+		border-radius: 2px;
+	}
 
-    li {
-      text-align: center;
-      padding: 1rem 0;
-      border-top: 1px solid #555;
-    }
+	/* --- Responsive Design (Mobile) --- */
+	@media (max-width: 1100px) { /* Zwiększyłem punkt łamania, bo masz dużo linków */
+		.hamburger {
+			display: flex;
+		}
 
-    li:hover {
-      background-color: #555;
-    }
-  }
+		.nav-links {
+			display: none;      /* Domyślnie ukryte na mobile */
+			width: 100%;
+			position: absolute;
+			top: 100%;
+			left: 0;
+			background-color: #444;
+			flex-direction: column;
+			align-items: center;
+			padding-bottom: 1rem;
+			gap: 1rem;
+			z-index: 1000;      /* Żeby menu było nad treścią strony */
+		}
 
-  /* --- Aktualizacja dla .nav-links --- */
-  .nav-links {
-    display: flex;
-    align-items: center; /* Wyrównuje linki i przycisk w pionie */
-    gap: 2rem; /* Odstęp między listą ul a przyciskiem */
-  }
+		.nav-links.active {
+			display: flex;      /* Pokaż jako flex (kolumna) gdy aktywne */
+		}
 
-  /* --- Stylizacja przycisku Rejestracji --- */
-  /* Wzorowane na klasie .btn-primary z Twojego +page.svelte */
-  a.btn-register {
-    background-color: #2563eb; /* Kolor z +page.svelte */
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    font-size: 1rem;
-    transition: background-color 0.2s;
-    white-space: nowrap; /* Zapobiega łamaniu tekstu */
-  }
+		ul {
+			flex-direction: column;
+			width: 100%;
+			gap: 0;
+		}
 
-  a.btn-register:hover {
-    background-color: #1d4ed8; /* Ciemniejszy odcień przy hover */
-    text-decoration: none;     /* Usuwa podkreślenie linku */
-    color: white;
-  }
+		li {
+			text-align: center;
+			padding: 1rem 0;
+			border-top: 1px solid #555;
+		}
 
-  /* --- Aktualizacja dla wersji mobilnej (max-width: 768px) --- */
-  @media (max-width: 768px) {
-    .nav-links {
-      /* Istniejące style... */
-      display: none;
-      width: 100%;
-      position: absolute;
-      top: 100%;
-      left: 0;
-      background-color: #444;
-      flex-direction: column;
-      align-items: center; /* Wyśrodkowanie elementów w pionie */
-      padding-bottom: 1rem; /* Margines na dole dla przycisku */
-      gap: 1rem; /* Odstęp wewnątrz menu mobilnego */
-    }
+		li:hover {
+			background-color: #555;
+		}
 
-    .nav-links.active {
-      display: flex;
-    }
-    
-    /* Drobna poprawka, aby przycisk nie był zbyt szeroki na telefonie */
-    a.btn-register {
-      width: 80%;       /* Szeroki przycisk na mobilkach */
-      text-align: center;
-      margin-top: 1rem;
-    }
-  }
+		/* Dostosowanie przycisku na mobile */
+		:global(.btn-register) {
+			width: 80%;
+			text-align: center;
+			margin-top: 1rem;
+		}
+		
+		/* Formularz na mobile też musi być wycentrowany */
+		.nav-links form {
+			width: 100%;
+			justify-content: center;
+		}
+	}
 </style>

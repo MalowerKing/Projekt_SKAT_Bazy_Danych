@@ -1,3 +1,4 @@
+import * as auth from '$lib/server/auth';
 import { fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db'; 
 import { gra, user, miejsca, turniej, role } from '$lib/server/db/schema';
@@ -7,10 +8,8 @@ import type { PageServerLoad, Actions } from './$types';
 import { form } from '$app/server';
 import { isValidRoleID, isValidPermissions } from '$lib/server/auth';
 
-export const load: PageServerLoad = async (event) => {
-    if (!event.locals.user) {
-        throw redirect(302, '/login');
-    }
+export const load: PageServerLoad = async ({ locals }) => {
+    const sessionUser = auth.requireLogin(locals);
 
     try {
         const roles = await db.select().from(role);

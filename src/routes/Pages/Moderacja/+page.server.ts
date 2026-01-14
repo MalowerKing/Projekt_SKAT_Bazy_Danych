@@ -5,10 +5,8 @@ import { eq, inArray } from 'drizzle-orm';
 import type { PageServerLoad, Actions } from './$types'; 
 import * as auth from '$lib/server/auth';
 
-export const load: PageServerLoad = async (event) => {
-    if (!event.locals.user) {
-        throw redirect(302, '/login');
-    }
+export const load: PageServerLoad = async ({ locals }) => {
+    const sessionUser = auth.requireLogin(locals);
 
     try {
         const users = await db.select().from(user);

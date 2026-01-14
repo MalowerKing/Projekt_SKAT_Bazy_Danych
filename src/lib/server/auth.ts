@@ -4,7 +4,7 @@ import { sha256 } from '@oslojs/crypto/sha2';
 import { encodeBase64url, encodeHexLowerCase } from '@oslojs/encoding';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import { encodeBase32LowerCase } from '@oslojs/encoding';
 import { verify, hash } from '@node-rs/argon2';
 
@@ -222,4 +222,12 @@ export async function doesUserExistByEmail(email: string): Promise<boolean> {
 export async function doesRoleExistById(roleId: string): Promise<boolean> {
 	const roles = await db.select().from(table.role).where(eq(table.role.id, roleId)).limit(1);
 	return roles.length > 0;
+}
+
+export function requireLogin(locals: App.Locals) {
+	if (!locals.user) {
+		// W SvelteKit 'redirect' rzuca błąd, więc przerywa wykonanie kodu
+		redirect(302, '/loginrequired');
+	}
+	return locals.user;
 }

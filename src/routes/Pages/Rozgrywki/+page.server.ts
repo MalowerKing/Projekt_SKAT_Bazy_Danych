@@ -1,3 +1,4 @@
+import * as auth from '$lib/server/auth';
 import { fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db'; 
 import { gra, user, miejsca, turniej } from '$lib/server/db/schema';
@@ -9,9 +10,7 @@ import { form } from '$app/server';
 
 
 export const load: PageServerLoad = async (event) => {
-	if (!event.locals.user) {
-		throw redirect(302, '/login');
-	}
+    const sessionUser = auth.requireLogin(event.locals);
 
 
     const gracz1 = alias(user, 'gracz1');

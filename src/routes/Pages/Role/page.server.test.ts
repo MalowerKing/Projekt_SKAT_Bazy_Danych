@@ -18,7 +18,8 @@ vi.mock('$lib/server/db', () => ({
 
 vi.mock('$lib/server/auth', () => ({
     isValidRoleID: vi.fn(),
-    isValidPermissions: vi.fn()
+    isValidPermissions: vi.fn(),
+    requireLogin: vi.fn()
 }));
 
 // Mock redirect z SvelteKit
@@ -50,14 +51,14 @@ describe('Role Management Server Logic', () => {
     });
 
     describe('load()', () => {
-        it('powinien przekierować do /login, gdy brak użytkownika w sesji', async () => {
+        it('powinien przekierować do /loginrequired, gdy brak użytkownika w sesji', async () => {
             const event = { locals: { user: null } };
 
             try {
                 await load(event as any);
             } catch (err: any) {
-                expect(redirect).toHaveBeenCalledWith(302, '/login');
-                expect(err.location).toBe('/login');
+                expect(redirect).toHaveBeenCalledWith(302, '/loginrequired');
+                expect(err.location).toBe('/loginrequired');
             }
         });
 

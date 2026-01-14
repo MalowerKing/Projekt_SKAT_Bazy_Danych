@@ -1,3 +1,4 @@
+import * as auth from '$lib/server/auth';
 import { db } from "$lib/server/db";
 import { miejsca, turniej, user, gra, zaproszenia, listaUczestnikowTurniej } from "$lib/server/db/schema";
 import { alias } from "drizzle-orm/mysql-core";
@@ -13,9 +14,10 @@ const zwyciezca = alias(user, "zwycięzcaTurnieju");
 
 let currentUser = "";
 
-export const load: PageServerLoad = async (event) => {
+export const load: PageServerLoad = async ({ locals }) => {
+    const sessionUser = auth.requireLogin(locals);
     const places = await db.select().from(miejsca);
-    currentUser = event.locals.session!.userId;
+    currentUser = locals.session!.userId;
 
     return {
         turnieje: await db.select({

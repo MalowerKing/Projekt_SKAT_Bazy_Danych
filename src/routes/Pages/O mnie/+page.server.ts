@@ -5,12 +5,14 @@ import { eq } from 'drizzle-orm';
 import { hash, verify } from '@node-rs/argon2'; 
 import type { PageServerLoad, Actions } from './$types'; 
 import * as auth from '$lib/server/auth';
+import { error } from 'console';
 
-export const load: PageServerLoad = async (event) => {
-    if (!event.locals.user) {
-        throw redirect(302, '/login');
+export const load: PageServerLoad = async ({ locals }) => {
+    const sessionUser = auth.requireLogin(locals);
+
+    if (!locals.user) {
+        throw error(401, 'Unauthorized');
     }
-
     const [dbUser] = await db
         .select({
             nazwa: user.nazwa,
@@ -19,7 +21,7 @@ export const load: PageServerLoad = async (event) => {
             role: user.role
         })
         .from(user)
-        .where(eq(user.id, event.locals.user.id));
+        .where(eq(user.id, locals.user.id));
 
     return {
         userData: dbUser

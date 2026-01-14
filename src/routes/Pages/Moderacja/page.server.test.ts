@@ -19,6 +19,16 @@ vi.mock('$lib/server/db', () => ({
     }
 }));
 
+vi.mock('$lib/server/auth', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('$lib/server/auth')>();
+    return {
+        ...actual, // To zachowuje Twoją funkcję requireLogin oraz inne (hashPassword itp.)
+        // Jeśli potrzebujesz szpiegować (spy) requireLogin, możesz to nadpisać tak:
+        requireLogin: vi.fn(actual.requireLogin), 
+    };
+});
+
+
 vi.mock('@sveltejs/kit', () => ({
     fail: vi.fn((status, data) => ({ status, ...data })),
     redirect: vi.fn((status, location) => {

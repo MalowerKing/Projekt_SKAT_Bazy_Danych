@@ -40,6 +40,7 @@ vi.mock('$lib/server/auth', () => ({
     isValidPassword: vi.fn(() => true),
     isValidEmail: vi.fn(() => true),
     isValidUsername: vi.fn(() => true),
+    requireLogin: vi.fn(),
 }));
 
 describe('Ustawienia Profilu - Page Server', () => {

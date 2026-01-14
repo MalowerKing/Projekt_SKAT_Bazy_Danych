@@ -3,6 +3,7 @@ import { load } from './+page.server';
 // Importujemy bazę i schemat, aby móc je zmockować i porównać
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema';
+import * as auth from '$lib/server/auth';
 
 // 1. Całkowite zmockowanie modułu bazy danych
 vi.mock('$lib/server/db', () => ({
@@ -10,6 +11,15 @@ vi.mock('$lib/server/db', () => ({
         select: vi.fn()
     }
 }));
+
+// 2. Mockowanie funkcji requireLogin z auth.ts
+vi.mock('$lib/server/auth', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('$lib/server/auth')>();
+    return {
+        ...actual,
+        requireLogin: vi.fn(actual.requireLogin),
+    };
+});
 
 describe('Load function unit test', () => {
     

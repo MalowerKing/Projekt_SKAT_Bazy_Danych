@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { load, actions } from './+page.server';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
-
+import * as auth from '$lib/server/auth';
 // --- MOCKI ---
 
 vi.mock('$lib/server/db', () => ({
@@ -13,6 +13,16 @@ vi.mock('$lib/server/db', () => ({
         transaction: vi.fn()
     }
 }));
+
+vi.mock('$lib/server/auth', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('$lib/server/auth')>();
+    return {
+        ...actual, // To zachowuje Twoją funkcję requireLogin oraz inne (hashPassword itp.)
+        // Jeśli potrzebujesz szpiegować (spy) requireLogin, możesz to nadpisać tak:
+        requireLogin: vi.fn(actual.requireLogin), 
+    };
+});
+
 
 // Mockujemy generator ID, żeby testy były przewidywalne
 vi.mock('@oslojs/encoding', () => ({
@@ -41,10 +51,11 @@ describe('Page Server Load & Actions', () => {
     });
 
     describe('load()', () => {
-        it('powinien zwrócić puste dane, gdy użytkownik nie jest zalogowany', async () => {
-            const result = await load({ locals: { user: null } } as any);
-            expect(result.mojeZaproszenia).toEqual([]);
-            expect(result.currentUserId).toBeNull();
+        it('powinien przkierować do /loginrequired, gdy brak sesji', async () => {
+            const event = { locals: { user: null } };
+            
+            await expect(load(event as any)).rejects.toThrow('Redirect');
+            expect(auth.requireLogin).toHaveBeenCalled();
         });
 
         it('powinien pobrać wszystkie dane dla zalogowanego użytkownika', async () => {

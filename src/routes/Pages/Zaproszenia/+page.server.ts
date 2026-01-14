@@ -1,3 +1,4 @@
+import * as auth from '$lib/server/auth';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
@@ -14,6 +15,8 @@ function generateUserId() {
 }
 
 export const load: PageServerLoad = async ({ locals }) => {
+    const sessionUser = auth.requireLogin(locals);
+    
     if (!locals.user) {
         return { 
             mojeZaproszenia: [], 

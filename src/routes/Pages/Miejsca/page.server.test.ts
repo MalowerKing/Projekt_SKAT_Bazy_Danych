@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { load, actions } from './+page.server';
 import { db } from '$lib/server/db';
 import { fail } from '@sveltejs/kit';
+import * as auth from '$lib/server/auth';
 
 // --- MOCKI ---
 
@@ -21,6 +22,15 @@ vi.mock('$lib/server/db', () => ({
         transaction: vi.fn()
     }
 }));
+
+vi.mock('$lib/server/auth', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('$lib/server/auth')>();
+    return {
+        ...actual, // To zachowuje Twoją funkcję requireLogin oraz inne (hashPassword itp.)
+        // Jeśli potrzebujesz szpiegować (spy) requireLogin, możesz to nadpisać tak:
+        requireLogin: vi.fn(actual.requireLogin), 
+    };
+});
 
 vi.mock('@sveltejs/kit', () => ({
     fail: vi.fn((status, data) => ({ status, ...data }))
