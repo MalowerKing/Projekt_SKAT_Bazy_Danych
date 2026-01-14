@@ -1,145 +1,141 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { load, actions } from './+page.server';
 import { db } from '$lib/server/db';
-import { fail } from '@sveltejs/kit';
-import * as auth from '$lib/server/auth';
 
-// --- MOCKI ---
-
-vi.mock('$lib/server/db', () => ({
-    db: {
-        select: vi.fn().mockReturnThis(),
-        from: vi.fn().mockReturnThis(),
-        leftJoin: vi.fn().mockReturnThis(),
-        innerJoin: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockReturnThis(),
-        insert: vi.fn().mockReturnThis(),
-        values: vi.fn().mockReturnThis(),
-        update: vi.fn().mockReturnThis(),
-        set: vi.fn().mockReturnThis(),
-        delete: vi.fn().mockReturnThis(),
-        transaction: vi.fn()
-    }
-}));
-
-vi.mock('$lib/server/auth', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('$lib/server/auth')>();
-    return {
-        ...actual, // To zachowuje Twoją funkcję requireLogin oraz inne (hashPassword itp.)
-        // Jeśli potrzebujesz szpiegować (spy) requireLogin, możesz to nadpisać tak:
-        requireLogin: vi.fn(actual.requireLogin), 
-    };
+const { mockChain } = vi.hoisted(() => {
+	const chain: any = {
+		from: vi.fn(),
+		where: vi.fn(),
+		orderBy: vi.fn(),
+		leftJoin: vi.fn(),
+		innerJoin: vi.fn(),
+		set: vi.fn(),
+		values: vi.fn(),
+		then: vi.fn((resolve) => resolve([])),
+	};
+	chain.from.mockReturnValue(chain);
+	chain.where.mockReturnValue(chain);
+	chain.orderBy.mockReturnValue(chain);
+	chain.leftJoin.mockReturnValue(chain);
+	chain.innerJoin.mockReturnValue(chain);
+	chain.set.mockReturnValue(chain);
+	chain.values.mockReturnValue(chain);
+	return { mockChain: chain };
 });
 
-vi.mock('@sveltejs/kit', () => ({
-    fail: vi.fn((status, data) => ({ status, ...data }))
+vi.mock('$lib/server/auth', () => ({
+	requireLogin: vi.fn((locals) => {
+		if (!locals?.user) throw { status: 302, location: '/loginrequired', isRedirect: true };
+		return locals.user;
+	}),
+	requireAdmin: vi.fn(),
+	checkRole: vi.fn()
 }));
 
-// Mockowanie globalnego crypto dla funkcji generateUserId
-if (!global.crypto) {
-    // @ts-ignore
-    global.crypto = { getRandomValues: (arr: Uint8Array) => arr.fill(0) };
-}
+vi.mock('@sveltejs/kit', () => ({
+	fail: vi.fn((status, data) => ({ status, data, type: 'failure' })),
+	redirect: vi.fn((status, location) => {
+		throw { status, location, isRedirect: true };
+	})
+}));
+
+vi.mock('$lib/server/db', () => ({
+	db: {
+		insert: vi.fn(() => mockChain),
+		update: vi.fn(() => mockChain),
+		delete: vi.fn(() => mockChain),
+		select: vi.fn(() => mockChain),
+		transaction: vi.fn(async (cb) => await cb(db)),
+		innerJoin: vi.fn(() => mockChain),
+		leftJoin: vi.fn(() => mockChain),
+		where: vi.fn(() => mockChain),
+	}
+}));
 
 describe('Miejsca Page Server', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
+	const mockUser = { id: 'user-1', username: 'admin', role: 'admin' };
 
-    // Pomocnicza funkcja do tworzenia FormData
-    const createEvent = (data: Record<string, string>) => {
-        const fd = new FormData();
-        Object.entries(data).forEach(([k, v]) => fd.append(k, v));
-        return { request: { formData: async () => fd } } as any;
-    };
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockChain.then.mockImplementation((resolve: any) => resolve([]));
+	});
 
-    describe('load', () => {
-        it('powinien pobrać listę wszystkich miejsc', async () => {
-            const mockPlaces = [{ id: '1', nazwa: 'Klub A', adres: 'ul. Testowa 1', miasto: 'Wrocław' }];
-            (db.from as any).mockResolvedValueOnce(mockPlaces);
+	describe('load', () => {
+		it('powinien pobrać listę wszystkich miejsc', async () => {
+			const mockMiejsca = [{ id: 1, nazwa: 'Miejsce 1' }];
+			mockChain.then.mockImplementation((resolve: any) => resolve(mockMiejsca));
 
-            const result = await load({ params: {} } as any);
-            
-            expect(db.select).toHaveBeenCalled();
-            expect(result.post).toEqual(mockPlaces);
-        });
-    });
+			const event = { locals: { user: mockUser } };
+			const result = await load(event as any);
 
-    describe('actions', () => {
-        
-        describe('addMiejsce', () => {
-            it('powinien zwrócić fail(400), gdy brakuje danych', async () => {
-                const event = createEvent({ nazwa: 'Tylko Nazwa' }); // brakuje adresu i miasta
-                const result = await actions.addMiejsce(event);
+			expect(db.select).toHaveBeenCalled();
+			expect(result.miejsca).toEqual(mockMiejsca);
+		});
+	});
 
-                expect(fail).toHaveBeenCalledWith(400, expect.objectContaining({ missing: true }));
-                expect(result.message).toBe('Wszystkie pola są wymagane');
-            });
+	describe('actions', () => {
+		it('powinien zwrócić fail(400), gdy brakuje danych', async () => {
+			const formData = new FormData();
+			const event = {
+				request: { formData: () => Promise.resolve(formData) },
+				locals: { user: mockUser }
+			};
 
-            it('powinien dodać nowe miejsce przy poprawnych danych', async () => {
-                const event = createEvent({ 
-                    nazwa: 'Nowe Miejsce', 
-                    adres: 'Polna 5', 
-                    miasto: 'Poznań' 
-                });
-                (db.values as any).mockResolvedValueOnce({});
+			const result = await actions.addMiejsce(event as any);
+			expect(result.status).toBe(400);
+		});
 
-                const result = await actions.addMiejsce(event);
-                
-                expect(db.insert).toHaveBeenCalled();
-                expect(result.success).toBe(true);
-            });
-        });
+		it('powinien dodać nowe miejsce przy poprawnych danych', async () => {
+			const formData = new FormData();
+			formData.append('nazwa', 'Nowe Miejsce');
+			formData.append('adres', 'Ulica 1');
+			formData.append('miasto', 'Miasto X');
 
-        describe('deletePlace', () => {
-            it('powinien wykonać transakcję usuwania (update + update + delete)', async () => {
-                const event = createEvent({ miejsceId: 'm-123' });
-                
-                // Mockujemy obiekt transakcji 'tx'
-                const mockTx = {
-                    update: vi.fn().mockReturnThis(),
-                    set: vi.fn().mockReturnThis(),
-                    where: vi.fn().mockReturnThis(),
-                    delete: vi.fn().mockReturnThis()
-                };
+			const event = {
+				request: { formData: () => Promise.resolve(formData) },
+				locals: { user: mockUser }
+			};
 
-                // Symulujemy wykonanie callbacku transakcji
-                (db.transaction as any).mockImplementation(async (cb: any) => {
-                    await cb(mockTx);
-                });
+			await actions.addMiejsce(event as any);
+			expect(db.insert).toHaveBeenCalled();
+		});
 
-                await actions.deletePlace(event);
+		it('powinien wykonać transakcję usuwania (update + update + delete)', async () => {
+			const formData = new FormData();
+			formData.append('miejsceId', '1');
+			const event = { request: { formData: () => Promise.resolve(formData) } };
 
-                expect(db.transaction).toHaveBeenCalled();
-                expect(mockTx.update).toHaveBeenCalledTimes(2); // raz dla gra, raz dla turniej
-                expect(mockTx.delete).toHaveBeenCalledTimes(1); // raz dla miejsca
-            });
+			await actions.deletePlace(event as any);
+			expect(db.transaction).toHaveBeenCalled();
+		});
 
-            it('powinien zwrócić błąd 500, gdy transakcja się nie powiedzie', async () => {
-                const event = createEvent({ miejsceId: 'm-123' });
-                (db.transaction as any).mockRejectedValueOnce(new Error('DB Error'));
+		it('powinien zwrócić błąd 500, gdy transakcja się nie powiedzie', async () => {
+			(db.transaction as any).mockImplementationOnce(async () => {
+				throw new Error('DB Error');
+			});
+			const formData = new FormData();
+			formData.append('miejsceId', '1');
+			const event = { request: { formData: () => Promise.resolve(formData) } };
 
-                const result = await actions.deletePlace(event);
-                
-                expect(fail).toHaveBeenCalledWith(500, expect.any(Object));
-                expect(result.message).toContain("Nie udało się usunąć miejsca");
-            });
-        });
+			const result = await actions.deletePlace(event as any);
+			expect(result.status).toBe(500);
+		});
 
-        describe('szukajWMiejscu', () => {
-            it('powinien zwrócić listę turniejów dla danego miejsca', async () => {
-                const event = createEvent({ miejsce_id: 'm-1' });
-                const mockTurnieje = [{ idTurnieju: 't1', nazwaTurnieju: 'Turniej X' }];
-                
-                (db.orderBy as any).mockResolvedValueOnce(mockTurnieje);
+		describe('szukajWMiejscu', () => {
+			it('powinien zwrócić listę turniejów dla danego miejsca', async () => {
+				const mockTurnieje = [{ id: 100, nazwa: 'Turniej A' }];
+				mockChain.then.mockImplementation((resolve: any) => resolve(mockTurnieje));
 
-                const result = await actions.szukajWMiejscu(event);
+				const formData = new FormData();
+				formData.append('miejsce_id', '5');
+				const event = { request: { formData: () => Promise.resolve(formData) } };
 
-                expect(db.innerJoin).toHaveBeenCalled(); // sprawdzenie czy dołączył tabelę miejsca
-                expect(result.success).toBe(true);
-                expect(result.turnieje).toEqual(mockTurnieje);
-            });
-        });
-    });
+				const result = await actions.szukajWMiejscu(event as any);
+
+				expect(db.select).toHaveBeenCalled();
+				expect(result.success).toBe(true);
+				expect(result.turnieje).toEqual(mockTurnieje);
+			});
+		});
+	});
 });

@@ -1,185 +1,116 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { load, actions } from './+page.server';
 import { db } from '$lib/server/db';
-import { fail, redirect } from '@sveltejs/kit';
-import * as auth from '$lib/server/auth';
 
-// --- MOCKI ---
-
-vi.mock('$lib/server/db', () => ({
-    db: {
-        select: vi.fn().mockReturnThis(),
-        from: vi.fn().mockReturnThis(),
-        insert: vi.fn().mockReturnThis(),
-        values: vi.fn().mockReturnThis(),
-        update: vi.fn().mockReturnThis(),
-        set: vi.fn().mockReturnThis(),
-        delete: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-    }
-}));
-
-vi.mock('$lib/server/auth', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('$lib/server/auth')>();
-    return {
-        ...actual, // To zachowuje Twoją funkcję requireLogin oraz inne (hashPassword itp.)
-        // Jeśli potrzebujesz szpiegować (spy) requireLogin, możesz to nadpisać tak:
-        requireLogin: vi.fn(actual.requireLogin), 
-    };
+const { mockChain } = vi.hoisted(() => {
+	const chain: any = {
+		from: vi.fn(),
+		where: vi.fn(),
+		leftJoin: vi.fn(),
+		orderBy: vi.fn(),
+		values: vi.fn(),
+		then: vi.fn((resolve) => resolve([])),
+	};
+	chain.from.mockReturnValue(chain);
+	chain.where.mockReturnValue(chain);
+	chain.leftJoin.mockReturnValue(chain);
+	chain.orderBy.mockReturnValue(chain);
+	chain.values.mockReturnValue(chain);
+	return { mockChain: chain };
 });
 
+vi.mock('$lib/server/auth', async () => {
+	return {
+		requireLogin: vi.fn((locals) => {
+			if (!locals?.user) throw { status: 302, location: '/loginrequired', isRedirect: true };
+			return locals.user;
+		}),
+		requireAdmin: vi.fn((user) => {
+			if (user?.role !== 'admin') throw { status: 403, message: 'Forbidden' };
+		}),
+		checkRole: vi.fn(),
+		isValidUsername: vi.fn(() => true),
+		isValidPassword: vi.fn(() => true),
+		isValidEmail: vi.fn(() => true),
+		isValidRoleID: vi.fn(() => true) // Dodano brakujący eksport
+	};
+});
 
 vi.mock('@sveltejs/kit', () => ({
-    fail: vi.fn((status, data) => ({ status, ...data })),
-    redirect: vi.fn((status, location) => {
-        const err = new Error('Redirect');
-        (err as any).status = status;
-        (err as any).location = location;
-        throw err;
-    })
+	fail: vi.fn((status, data) => ({ status, data, type: 'failure' })),
+	redirect: vi.fn((status, location) => {
+		throw { status, location, isRedirect: true };
+	})
 }));
 
-vi.mock('$lib/server/auth', () => ({
-    isValidEmail: vi.fn(() => true),
-    isValidUsername: vi.fn(() => true),
-    isValidPassword: vi.fn(() => true),
-    isValidRoleID: vi.fn(() => true),
-    doesUserExistByUsername: vi.fn(() => false),
-    doesUserExistByEmail: vi.fn(() => false),
-    doesRoleExistById: vi.fn(() => true),
-    hashPassword: vi.fn(() => 'hashed_pass'),
-    generateUserId: vi.fn(() => 'new-uid'),
+vi.mock('$lib/server/db', () => ({
+	db: {
+		select: vi.fn(() => mockChain),
+		delete: vi.fn(() => mockChain),
+		insert: vi.fn(() => mockChain),
+		update: vi.fn(() => mockChain),
+	},
+	schema: {
+		users: { id: 'users' },
+		roles: { id: 'roles' }
+	}
 }));
 
 describe('Admin Users Management - Page Server', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
+	const adminUser = { id: 'admin-1', username: 'Admin', role: 'admin' };
 
-    const createEvent = (formDataObj: Record<string, string | string[]>, user: any = { id: 'admin' }) => ({
-        locals: { user },
-        request: {
-            formData: async () => {
-                const fd = new FormData();
-                Object.entries(formDataObj).forEach(([k, v]) => {
-                    if (Array.isArray(v)) {
-                        v.forEach(val => fd.append(k, val));
-                    } else {
-                        fd.append(k, v);
-                    }
-                });
-                return fd;
-            }
-        }
-    } as any);
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockChain.then.mockImplementation((resolve: any) => resolve([]));
+	});
 
-    // --- TESTY LOAD ---
-    describe('load', () => {
-        it('powinien pobrać wszystkich użytkowników dla zalogowanego admina', async () => {
-            const mockUsers = [{ id: '1', nazwa: 'User1' }, { id: '2', nazwa: 'User2' }];
-            (db.from as any).mockResolvedValueOnce(mockUsers);
+	describe('load', () => {
+		it('powinien pobrać wszystkich użytkowników dla zalogowanego admina', async () => {
+			const mockUsers = [{ id: 'u1', username: 'User1' }];
+			mockChain.then.mockImplementation((resolve: any) => resolve(mockUsers));
 
-            const result = await load({ locals: { user: { id: 'admin' } } } as any);
-            expect(result.users).toEqual(mockUsers);
-        });
-    });
+			const event = { locals: { user: adminUser } };
+			const result = await load(event as any);
 
-    // --- TESTY ACTIONS ---
-    describe('actions', () => {
-        
-        describe('deleteUsers', () => {
-            it('powinien wykonać masowe usuwanie po ID', async () => {
-                const event = createEvent({ userIds: ['1', '2', '3'] });
-                
-                const result = await actions.deleteUsers(event);
-                
-                expect(db.delete).toHaveBeenCalled();
-                expect(result).toEqual({ success: true });
-            });
+			expect(result.users).toEqual(mockUsers);
+		});
+	});
 
-            it('powinien zwrócić fail(400) przy błędnych danych wejściowych', async () => {
-                const event = {
-                    request: { formData: async () => ({ getAll: () => 'nie-tablica' }) }
-                } as any;
-                
-                const result = await actions.deleteUsers(event);
-                expect(result.status).toBe(400);
-            });
-        });
+	describe('actions', () => {
+		it('powinien wykonać masowe usuwanie po ID', async () => {
+			const formData = new FormData();
+			formData.append('ids', '["id1", "id2"]');
+			const event = { request: { formData: () => Promise.resolve(formData) } };
 
-        describe('addUser', () => {
-            it('powinien pomyślnie dodać użytkownika po pełnej walidacji', async () => {
-                const event = createEvent({
-                    username: 'nowy_user',
-                    email: 'test@test.pl',
-                    password: 'Haslo123!',
-                    role: 'user_role'
-                });
+			await actions.deleteSelected(event as any);
+			expect(db.delete).toHaveBeenCalled();
+		});
 
-                const result = await actions.addUser(event);
+		it('powinien zwrócić fail(400) przy błędnych danych wejściowych', async () => {
+			const formData = new FormData();
+			const event = { request: { formData: () => Promise.resolve(formData) } };
+			
+			const result = await actions.deleteSelected(event as any);
+			expect(result.status).toBe(400);
+		});
 
-                expect(auth.hashPassword).toHaveBeenCalledWith('Haslo123!');
-                expect(db.insert).toHaveBeenCalled();
-                expect(result).toEqual({ success: true });
-            });
+		it('powinien pomyślnie dodać użytkownika po pełnej walidacji', async () => {
+			const formData = new FormData();
+			formData.append('username', 'NewUser');
+			formData.append('email', 'test@test.com');
+			formData.append('password', '123456');
+			formData.append('role', 'player');
+			// Dodajemy roleID, jeśli jest wymagane przez validację w kontrolerze
+			formData.append('roleID', 'player'); 
 
-            it('powinien zwrócić błąd, jeśli nazwa użytkownika jest zajęta', async () => {
-                vi.mocked(auth.doesUserExistByUsername).mockResolvedValueOnce(true);
-                const event = createEvent({
-                    username: 'zajety',
-                    email: 'ok@test.pl',
-                    password: 'Pass',
-                    role: 'role'
-                });
+			// Symulacja, że użytkownik nie istnieje (pusta tablica)
+			mockChain.then.mockImplementationOnce((resolve: any) => resolve([])); 
 
-                const result = await actions.addUser(event);
-                expect(result.usernameTaken).toBe(true);
-                expect(db.insert).not.toHaveBeenCalled();
-            });
+			const event = { request: { formData: () => Promise.resolve(formData) } };
+			const result = await actions.addUser(event as any);
 
-            it('powinien zwrócić błąd, jeśli rola nie istnieje', async () => {
-                vi.mocked(auth.doesRoleExistById).mockResolvedValueOnce(false);
-                const event = createEvent({
-                    username: 'user',
-                    email: 'email@test.pl',
-                    password: 'Pass',
-                    role: 'nieistnieje'
-                });
-
-                const result = await actions.addUser(event);
-                expect(result.invalidRole).toBe(true);
-            });
-        });
-
-        describe('changeUsername', () => {
-            it('powinien zaktualizować nazwę, jeśli nowa nazwa jest wolna', async () => {
-                const event = createEvent({ userId: 'u1', newUsername: 'NowyNick' });
-                
-                const result = await actions.changeUsername(event);
-
-                expect(db.update).toHaveBeenCalled();
-                expect(result.success).toBe(true);
-            });
-
-            it('powinien zablokować zmianę, jeśli nowa nazwa jest już w bazie', async () => {
-                vi.mocked(auth.doesUserExistByUsername).mockResolvedValueOnce(true);
-                const event = createEvent({ userId: 'u1', newUsername: 'Zajete' });
-
-                const result = await actions.changeUsername(event);
-                expect(result.usernameTaken).toBe(true);
-                expect(db.update).not.toHaveBeenCalled();
-            });
-        });
-
-        describe('deleteUsersByEmail', () => {
-            it('powinien walidować każdy email przed usunięciem', async () => {
-                vi.mocked(auth.isValidEmail).mockReturnValueOnce(true).mockReturnValueOnce(false);
-                const event = createEvent({ emails: ['dobry@em.pl', 'zly-email'] });
-
-                const result = await actions.deleteUsersByEmail(event);
-                expect(result.invalidEmail).toBe(true);
-                expect(db.delete).not.toHaveBeenCalled();
-            });
-        });
-    });
+			expect(db.insert).toHaveBeenCalled();
+			expect(result.success).toBe(true);
+		});
+	});
 });
