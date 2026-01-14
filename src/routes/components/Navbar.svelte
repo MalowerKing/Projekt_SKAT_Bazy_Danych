@@ -18,7 +18,7 @@
 
 <nav>
 	<div class="logo">
-		<a href="/">MyBrand</a>
+		<a href="/">SKAT POLIS</a>
 	</div>
 
 	<button
